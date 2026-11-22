@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- The bar starts with an icon that grows with everything you have earned and never goes back: a sprout, then coins at 100 000, gold at 1 000 000, a diamond at 10 000 000. The tooltip names the level and the next one; reaching a new level says so in the win notification.
+
 ## 0.3.0
 
 - **Growth** comes first: this month's income as a race against a monthly goal broken into stages with an even-pace mark, or against the same day of last month and the best month.

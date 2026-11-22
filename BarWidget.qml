@@ -30,7 +30,10 @@ Ui.BarWidget {
     if (s.problem) return s.problemText()
     if (!s.status) return s.t("tooltip.loading")
     var st = s.status, i = s.nextStepIndex
-    var lines = [i < 0 ? s.t("tooltip.all-steps") : s.t("tooltip.step").arg(s.stepTitle(st.ladder[i]))]
+    var lines = []
+    if (st.growth) lines.push(s.t("growth.title").arg(s.monthName(st.growth.month)) + ": " + s.money(st.growth.current))
+    lines.push(s.wealthText())
+    lines.push(i < 0 ? s.t("tooltip.all-steps") : s.t("tooltip.step").arg(s.stepTitle(st.ladder[i])))
     if (st.runway !== null) lines.push(s.t("tooltip.runway").arg(s.number(Math.round(st.runway * 10) / 10, 1)))
     if (st.unprocessed > 0) lines.push(s.tn("warn.unprocessed", st.unprocessed).arg(s.number(st.unprocessed, 0)))
     return lines.join("\n")
@@ -40,7 +43,7 @@ Ui.BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.service ? root.service.barText() : "◎"
+    text: root.service ? root.service.barText() : "\u{F0E66}"
     foreground: root.bar ? root.bar.barForeground : Commons.Color.foreground
     dimmed: !root.service || !root.service.status || !!root.service.problem
     tooltipText: root.tooltip()

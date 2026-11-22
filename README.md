@@ -10,7 +10,7 @@ This is an unofficial plugin and is not affiliated with the Beancount or Fava pr
 
 ## What you get
 
-- **In the bar:** this month's income and the goal, for example `105k · 70%`, or against last month (`42k ▲18%`), or `★` for a record month. Never red: a slow start of the month is not a failure.
+- **In the bar:** an icon that grows with everything you have earned (sprout → coins at 100 000 → gold at 1 000 000 → diamond at 10 000 000; it never goes back), then this month's income and the goal, for example `105k · 70%`, or against last month (`42k ▲18%`), or `★` for a record month. Never red: a slow start of the month is not a failure.
 - **Growth:** income this month as a race. With a goal: stages, an even-pace mark and how much is left to the next stage. Without one: the same day of last month and the best month. Below: where the money comes from, what this month adds to your reserve, lifetime milestones and recent wins. Each new win gets one notification.
 - **Freedom ladder:** 0 no debt with interest → 1 reserve of 6 months → 2 reserve of 12 months → 3 assets pay 25% of spending → 4 assets pay the fixed costs → 5 freedom capital (a year of spending divided by a 3.5% withdrawal rate). The numbers come from your ledger, not from the plugin.
 - **Four numbers:** net worth, runway, savings rate against your goal, income from assets per month.

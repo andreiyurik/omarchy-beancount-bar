@@ -195,5 +195,11 @@
   "win.stage": "Этап взят: %1",
   "win.first-income": "Первый доход записан",
   "help.ex.goal.code": "цель 500000",
-  "help.ex.goal.text": "цель дохода на месяц; цель 7000 usd"
+  "help.ex.goal.text": "цель дохода на месяц; цель 7000 usd",
+  "wealth.sprout": "Уровень: росток",
+  "wealth.coins": "Уровень: монеты",
+  "wealth.gold": "Уровень: слитки",
+  "wealth.diamond": "Уровень: бриллиант",
+  "wealth.next": "при %1 заработанного — %2",
+  "win.new-icon": "новый значок — %1"
 }

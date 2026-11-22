@@ -100,6 +100,18 @@ function freshWins(seen, wins) {
   return wins.filter(function(w) { return seen.indexOf(w.key) < 0 })
 }
 
+// The bar icon grows with everything earned, and never goes back: sprout, coins, gold, diamond.
+// Glyphs are from the Nerd Font the shell already uses (md-sprout, fa-coins, md-gold, md-diamond_stone).
+var WEALTH = [{from: 0, key: "sprout", glyph: "\u{F0E66}"}, {from: 100000, key: "coins", glyph: "\u{EDE8}"},
+              {from: 1000000, key: "gold", glyph: "\u{F124F}"}, {from: 10000000, key: "diamond", glyph: "\u{F01C8}"}]
+function wealthLevel(lifetime) {
+  var level = WEALTH[0], next = null
+  for (var i = 0; i < WEALTH.length; ++i) {
+    if (num(lifetime) >= WEALTH[i].from) { level = WEALTH[i]; next = WEALTH[i + 1] || null }
+  }
+  return {key: level.key, glyph: level.glyph, next: next ? {key: next.key, from: next.from} : null}
+}
+
 // "105к · 70%" with a goal, "105к ▲150%" against last month, "105к ★" for a record month.
 function growthBarText(g, format) {
   if (!g || (g.lifetime === 0 && g.current === 0 && !g.goal)) return "◎"
@@ -282,4 +294,4 @@ function barText(status) {
 if (typeof module !== "undefined") module.exports = {readStatus: readStatus, parseEntry: parseEntry, parseCommand: parseCommand, matchAccount: matchAccount,
   formatMoney: formatMoney, shortMoney: shortMoney, nextStep: nextStep, barText: barText, leaf: leaf, iso: iso,
   remaining: remaining, obsidianUrl: obsidianUrl, pluralCategory: pluralCategory, lookup: lookup,
-  readGrowth: readGrowth, freshWins: freshWins, growthBarText: growthBarText}
+  readGrowth: readGrowth, freshWins: freshWins, growthBarText: growthBarText, wealthLevel: wealthLevel}

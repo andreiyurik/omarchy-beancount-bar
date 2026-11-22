@@ -89,4 +89,9 @@ assert.strictEqual(M.parseCommand("цель выкл").off, true)
 assert.strictEqual(M.parseCommand("цель много").ok, false)
 assert.strictEqual(M.readGrowth({current: "5", wins: [{key: "x"}]}).wins[0].kind, "x")
 
+// The bar icon only grows.
+assert.deepStrictEqual([0, 99999, 100000, 999999, 1e6, 1e7, 5e7].map(x => M.wealthLevel(x).key), ["sprout", "sprout", "coins", "coins", "gold", "diamond", "diamond"])
+assert.deepStrictEqual(M.wealthLevel(192000).next, {key: "gold", from: 1000000})
+assert.strictEqual(M.wealthLevel(2e7).next, null)
+
 console.log("model tests passed")

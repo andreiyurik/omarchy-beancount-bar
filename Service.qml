@@ -90,12 +90,23 @@ Item {
   }
   readonly property var shortFormat: ({k: t("short.k"), m: t("short.m"), decimal: locale.decimalPoint})
   function shortMoney(value) { return amountsHidden ? "•••" : Model.shortMoney(value, shortFormat) }
+  readonly property var wealth: Model.wealthLevel(status && status.growth ? status.growth.lifetime : 0)
+  // Icon first, so the widget reads as money at a glance; then the state of the month, if any.
   function barText() {
-    if (!status) return Model.barText(status)
-    if (barShows === "freedom" || !status.growth) return Model.barText(status)
-    var g = status.growth
-    if (amountsHidden) return g.goal ? (g.goal.reached ? "★" : Math.floor(g.goal.progress * 100) + "%") : g.delta !== null ? (g.delta >= 0 ? "▲" : "▼") + Math.abs(g.delta) + "%" : "◎"
-    return Model.growthBarText(g, shortFormat)
+    if (!status) return status === null && !problem ? wealth.glyph : "◎"
+    var state
+    if (barShows === "freedom" || !status.growth) state = Model.barText(status)
+    else {
+      var g = status.growth
+      if (amountsHidden) state = g.goal ? (g.goal.reached ? "★" : Math.floor(g.goal.progress * 100) + "%") : g.delta !== null ? (g.delta >= 0 ? "▲" : "▼") + Math.abs(g.delta) + "%" : ""
+      else state = Model.growthBarText(g, shortFormat)
+    }
+    return state === "◎" || state === "" ? wealth.glyph : wealth.glyph + " " + state
+  }
+  function wealthText() {
+    var w = wealth
+    var line = t("wealth." + w.key)
+    return w.next ? line + " · " + t("wealth.next").arg(money(w.next.from)).arg(t("wealth." + w.next.key)) : line
   }
   function sourceName(name) {
     var parts = String(name).split(":")
@@ -103,7 +114,10 @@ Item {
     return parts[1] && parts[1] !== "Uncategorized" ? kind + " · " + parts[1] : kind
   }
   function winText(w) {
-    if (w.kind === "lifetime") return t("win.lifetime").arg(money(w.amount))
+    if (w.kind === "lifetime") {
+      var grown = Model.wealthLevel(w.amount)
+      return t("win.lifetime").arg(money(w.amount)) + (grown.key !== Model.wealthLevel(w.amount - 1).key ? " · " + t("win.new-icon").arg(t("wealth." + grown.key)) : "")
+    }
     if (w.kind === "record") return t("win.record").arg(monthName(w.month))
     if (w.kind === "growth3") return t("win.growth3")
     if (w.kind === "two-sources") return t("win.two-sources")

@@ -185,5 +185,11 @@
   "win.stage": "Stage taken: %1",
   "win.first-income": "First income recorded",
   "help.ex.goal.code": "goal 500000",
-  "help.ex.goal.text": "monthly income goal; goal 7000 usd"
+  "help.ex.goal.text": "monthly income goal; goal 7000 usd",
+  "wealth.sprout": "Level: sprout",
+  "wealth.coins": "Level: coins",
+  "wealth.gold": "Level: gold",
+  "wealth.diamond": "Level: diamond",
+  "wealth.next": "at %1 earned: %2",
+  "win.new-icon": "new icon: %1"
 }
