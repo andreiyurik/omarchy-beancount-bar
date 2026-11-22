@@ -17,8 +17,8 @@
 2026-11-06 * "Аренда"
   Expenses:Fixed:Housing      60000 RUB
   Assets:Liquid:Tbank
-2026-11-07 * "кофе"
-  Expenses:Life:EatingOut       300 RUB
+2026-11-07 * "проездной"
+  Expenses:Fixed:Transport     3000 RUB
   Assets:Liquid:Tbank
 2026-11-08 * "Продажа приложения"
   Assets:Liquid:Tbank          5000 RUB

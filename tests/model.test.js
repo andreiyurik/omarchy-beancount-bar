@@ -6,17 +6,17 @@ const ctx = {
   currencies: ["EUR", "RUB", "USD", "USDT"],
   accounts: [
     {name: "Assets:Liquid:Cash", short: "нал"}, {name: "Assets:Liquid:Tbank", short: "карта"},
-    {name: "Assets:Business:Checking", short: "ип"}, {name: "Expenses:Life:EatingOut", short: ""},
+    {name: "Assets:Business:Checking", short: "ип"}, {name: "Expenses:Life:EatingOut", short: ""}, {name: "Expenses:Fixed:Transport", short: ""},
     {name: "Expenses:Growth:Tools", short: ""}, {name: "Expenses:Business:Tools", short: ""},
     {name: "Expenses:Uncategorized", short: ""}, {name: "Income:Business:Revenue", short: ""}, {name: "Income:Uncategorized", short: ""}
   ],
-  history: {"кофе": {account: "Expenses:Life:EatingOut", source: "Assets:Liquid:Tbank"}}
+  history: {"проездной": {account: "Expenses:Fixed:Transport", source: "Assets:Liquid:Tbank"}}
 }
 const today = new Date(2026, 10, 22)
 const p = line => M.parseEntry(line, today, ctx)
 
 // History decides the category and where the money came from.
-assert.deepStrictEqual([p("450 кофе").account, p("450 кофе").source, p("450 кофе").flag], ["Expenses:Life:EatingOut", "Assets:Liquid:Tbank", "*"])
+assert.deepStrictEqual([p("2900 проездной").account, p("2900 проездной").source, p("2900 проездной").flag], ["Expenses:Fixed:Transport", "Assets:Liquid:Tbank", "*"])
 // Unknown goes to the inbox with "!".
 assert.deepStrictEqual([p("1,5к что-то").account, p("1,5к что-то").amount, p("1,5к что-то").flag], ["Expenses:Uncategorized", 1500, "!"])
 assert.strictEqual(p("100 такси вчера").date, "2026-11-21")
@@ -28,22 +28,22 @@ assert.strictEqual(p("2000 хостинг >Tools").ok, false)  // two Tools with
 // Currency by code or sign.
 assert.strictEqual(p("12 usd хостинг").currency, "USD")
 assert.strictEqual(p("$12 хостинг").currency, "USD")
-assert.strictEqual(p("12€ кофе").currency, "EUR")
-assert.strictEqual(p("450 кофе @нал").source, "Assets:Liquid:Cash")
+assert.strictEqual(p("12€ проездной").currency, "EUR")
+assert.strictEqual(p("2900 проездной @нал").source, "Assets:Liquid:Cash")
 // Errors.
 assert.strictEqual(p("").error, "empty")
-assert.strictEqual(p("кофе 450").error, "amount-first")
+assert.strictEqual(p("проездной 2900").error, "amount-first")
 assert.strictEqual(p("450").error, "name-missing")
-assert.strictEqual(p("12x кофе").error, "bad-amount")
-assert.strictEqual(p("450 кофе @нетакого").error, "unknown-account")
+assert.strictEqual(p("12x проездной").error, "bad-amount")
+assert.strictEqual(p("2900 проездной @нетакого").error, "unknown-account")
 // Quotes can't break out of the Beancount string.
-assert.strictEqual(p('450 "кофе"').narration, "'кофе'")
+assert.strictEqual(p('450 "проездной"').narration, "'проездной'")
 
 // Week commands.
 assert.deepStrictEqual(M.parseCommand("неделя 10 предложений клиентам"), {ok: true, kind: "week", args: ["10", "предложений", "клиентам"], target: 10, text: "предложений клиентам"})
 assert.deepStrictEqual(M.parseCommand("week +1"), {ok: true, kind: "week", args: ["+1"]})
 assert.strictEqual(M.parseCommand("неделя много").ok, false)
-assert.strictEqual(M.parseCommand("450 кофе"), null)
+assert.strictEqual(M.parseCommand("2900 проездной"), null)
 
 // Status is bounded and typed.
 const raw = {schema: 1, ladder: [{key: "no-debt", done: true, progress: 1}, {key: "reserve-min", done: false, progress: 0.814, months: 6}],

@@ -2,7 +2,7 @@
 
   fin check                   проверить журнал и правила конституции
   fin report                  net worth, норма сбережений, runway, лестница свободы
-  fin add 450 кофе @нал       быстрый ввод одной строкой (подробно: fin add --help)
+  fin add 2900 проездной @нал быстрый ввод одной строкой (подробно: fin add --help)
   fin undo                    отменить последний быстрый ввод
   fin week 10 предложений     действие недели; fin week +1 / -1 / clear
   fin goal 500000 | 7000 usd  цель дохода на месяц; fin goal off
@@ -471,7 +471,7 @@ AMOUNT_RE = re.compile(r"^(\+?)([$€₽]?)(\d+(?:[.,]\d{1,2})?)([кkКK]?)([$�
 
 
 def parse_entry(line, today, accounts, hist, p, currencies):
-    """Строка «450 кофе @нал >EatingOut #ип вчера» → словарь операции. Правила — в README плагина."""
+    """Строка «2900 проездной @нал >Transport #ип вчера» → словарь операции. Правила — в README плагина."""
     tokens = line.split()
     if not tokens:
         raise FinError("empty", "Пустая строка.")
@@ -479,7 +479,7 @@ def parse_entry(line, today, accounts, hist, p, currencies):
     if not mo:
         if re.match(r"^\+?[$€₽]?\d", tokens[0]):
             raise FinError("bad-amount", f"Не понимаю сумму «{tokens[0]}».", amount=tokens[0])
-        raise FinError("amount-first", "Сначала сумма: «450 кофе».")
+        raise FinError("amount-first", "Сначала сумма: «2900 проездной».")
     income = mo.group(1) == "+"
     amount = Decimal(mo.group(3).replace(",", "."))
     if mo.group(4):
@@ -508,7 +508,7 @@ def parse_entry(line, today, accounts, hist, p, currencies):
             words.append(tok)
     narration = " ".join(words).replace('"', "'").strip()
     if not narration:
-        raise FinError("name-missing", "Нужно описание: «450 кофе».")
+        raise FinError("name-missing", "Нужно описание: «2900 проездной».")
 
     known = hist.get(narration.lower())
     cat_root = "Income:" if income else "Expenses:"
@@ -815,7 +815,7 @@ def cmd_status(a):
 def cmd_add(a):
     line = " ".join(a.words)
     if not line and not a.json:
-        line = input("Строка (450 кофе @нал >EatingOut #ип вчера): ").strip()
+        line = input("Строка (2900 проездной @нал >Transport #ип вчера): ").strip()
     e = add_entry(line)
     if a.json:
         return emit({"ok": True, "entry": e})
@@ -906,7 +906,7 @@ def main(argv=None):
     cmd("status", cmd_status, True)
     s = cmd("add", cmd_add, True, formatter_class=argparse.RawDescriptionHelpFormatter, description=(
         "Одна строка: СУММА [ВАЛЮТА] описание [@откуда] [>категория] [#ип] [вчера|позавчера]\n"
-        "  450 кофе                 расход наличными; категория — как в прошлый раз «кофе»\n"
+        "  2900 проездной           расход наличными; категория — как в прошлый раз «проездной»\n"
         "  +120к клиент Альфа #ип   доход ИП на расчётный счёт\n"
         "  12 usd хостинг #ип >Tools\n"
         "  1200 такси @тинькофф вчера\n"

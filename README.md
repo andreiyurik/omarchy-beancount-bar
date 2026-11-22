@@ -46,12 +46,12 @@ AMOUNT [CURRENCY] description [@from] [>category] [#tag] [yesterday]
 
 | Line | Means |
 | --- | --- |
-| `450 coffee` | spending; category and account as last time for “coffee” |
+| `2900 transit pass` | spending; category and account as last time for “transit pass” |
 | `1,5k something new` | unknown: goes to `Expenses:Uncategorized` with a `!` flag, to sort later |
 | `+120k client #ип` | income of the business (the tag is set in the ledger) |
 | `2000 hosting #ип >Tools` | `>` picks a category; with the business tag, business accounts win |
 | `12 usd hosting`, `$12 hosting` | another currency |
-| `450 coffee @cash yesterday` | `@` picks the account by its `short:` alias or name |
+| `2900 transit pass @cash yesterday` | `@` picks the account by its `short:` alias or name |
 | `week 10 client offers` | sets the action of the week; ↑ and ↓ count it |
 | `goal 500000`, `goal 7000 usd`, `goal off` | the monthly income goal |
 

@@ -14,14 +14,14 @@ const fin = (...args) => {
 
 const status = M.readStatus(fin("status", "--json").out)
 assert.strictEqual(status.ok, true, "status")
-assert.strictEqual(status.liquid, 244700)
+assert.strictEqual(status.liquid, 242000)
 assert.strictEqual(status.tax.reserved, 3000)
 assert.strictEqual(status.ladder.length, 6)
 assert.ok(status.warnings.some(w => w.key === "tax-gap"))
 assert.ok(status.entry.accounts.some(a => a.short === "карта"))
 
-const lines = ["450 кофе", "1,5к что-то новое вчера", "+12к клиент #ип", "2000 хостинг #ип >Tools", "12 usd хостинг", "$12 хостинг",
-  "450 кофе @нал", "450 кофе @карта", "кофе 450", "450", "12x кофе", "450 кофе @нетакого", "2000 хостинг >Tools", '450 "кофе"', "100 такси позавчера"]
+const lines = ["2900 проездной", "1,5к что-то новое вчера", "+12к клиент #ип", "2000 хостинг #ип >Tools", "12 usd хостинг", "$12 хостинг",
+  "2900 проездной @нал", "2900 проездной @карта", "проездной 2900", "2900", "12x проездной", "2900 проездной @нетакого", "2000 хостинг >Tools", '450 "проездной"', "100 такси позавчера"]
 const py = `
 import json, sys, datetime as dt
 sys.path.insert(0, ${JSON.stringify(path.join(repo, "cli"))})
@@ -44,11 +44,11 @@ lines.forEach((line, i) => {
 })
 
 // Write, undo and the week through the real command.
-let r = JSON.parse(fin("add", "--json", "--", "450 кофе").out)
+let r = JSON.parse(fin("add", "--json", "--", "2900 проездной").out)
 assert.strictEqual(r.ok, true)
-assert.strictEqual(M.readStatus(fin("status", "--json").out).liquid, 244250)
-assert.strictEqual(JSON.parse(fin("undo", "--json", r.entry.id).out).narration, "кофе")
-assert.strictEqual(M.readStatus(fin("status", "--json").out).liquid, 244700)
+assert.strictEqual(M.readStatus(fin("status", "--json").out).liquid, 239100)
+assert.strictEqual(JSON.parse(fin("undo", "--json", r.entry.id).out).narration, "проездной")
+assert.strictEqual(M.readStatus(fin("status", "--json").out).liquid, 242000)
 r = fin("add", "--json", "--", "$20 хостинг #ип")          // a rouble account refuses dollars
 assert.strictEqual(r.code, 1)
 assert.strictEqual(JSON.parse(r.out).error, "ledger")
