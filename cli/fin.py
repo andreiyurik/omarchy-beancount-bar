@@ -227,6 +227,7 @@ def metrics(entries, today):
                     "biz_revenue": -by_month[k]["biz_revenue"],
                     "biz_expenses": by_month[k]["biz_exp"]} for k in last_months(today, 6)],
         "unprocessed": unprocessed, "missing_prices": sorted(conv.missing),
+        "tx_count": sum(1 for t in txns if not any(x.account.startswith("Equity:") for x in t.postings)),
     }
     m["ladder"] = ladder(m, p)
     m["warnings"] = warnings(m, p)
@@ -245,14 +246,21 @@ def ladder(m, p):
     months_min, months_target = dec(p, "reserve-months-min", 6), dec(p, "reserve-months-target", 12)
     share3 = dec(p, "streams-share-step3", "0.25")
     fi_capital = living * 12 / wr if living > 0 else Decimal(0)
+    capital = m["liquid"] + m["invest"] + m["crypto"]
+    # have/need — в рублях, чтобы панель могла сказать «осталось N ₽» (для доходов — в месяц).
     steps = [
-        {"key": "no-debt", "progress": Decimal(1) if m["debt"] >= 0 else Decimal(0)},
-        {"key": "reserve-min", "months": months_min, "progress": ratio(m["liquid"], living * months_min)},
-        {"key": "reserve-target", "months": months_target, "progress": ratio(m["liquid"], living * months_target)},
-        {"key": "asset-share", "share": share3, "progress": ratio(m["asset_income"], living * share3)},
-        {"key": "asset-fixed", "progress": ratio(m["asset_income"], m["fixed"])},
-        {"key": "freedom", "capital": fi_capital,
-         "progress": ratio(m["liquid"] + m["invest"] + m["crypto"], fi_capital)},
+        {"key": "no-debt", "progress": Decimal(1) if m["debt"] >= 0 else Decimal(0),
+         "have": Decimal(0), "need": -m["debt"] if m["debt"] < 0 else Decimal(0)},
+        {"key": "reserve-min", "months": months_min, "progress": ratio(m["liquid"], living * months_min),
+         "have": m["liquid"], "need": living * months_min},
+        {"key": "reserve-target", "months": months_target, "progress": ratio(m["liquid"], living * months_target),
+         "have": m["liquid"], "need": living * months_target},
+        {"key": "asset-share", "share": share3, "progress": ratio(m["asset_income"], living * share3),
+         "have": m["asset_income"], "need": living * share3, "monthly": True},
+        {"key": "asset-fixed", "progress": ratio(m["asset_income"], m["fixed"]),
+         "have": m["asset_income"], "need": m["fixed"], "monthly": True},
+        {"key": "freedom", "capital": fi_capital, "progress": ratio(capital, fi_capital),
+         "have": capital, "need": fi_capital},
     ]
     for s in steps:
         s["done"] = s["progress"] is not None and s["progress"] >= 1
@@ -514,6 +522,15 @@ def emit(obj):
     print(json.dumps(jsonable({"schema": SCHEMA, **obj}), ensure_ascii=False))
 
 
+DOCS = [("guide", "README.md"), ("constitution", "00 Конституция.md"),
+        ("policy", "01 Инвестиционная политика.md"), ("ladder", "02 Лестница свободы.md")]
+
+
+def docs():
+    """Заметки рядом с журналом, которые панель может открыть в Obsidian (только существующие)."""
+    return [{"key": k, "path": str(ROOT / name)} for k, name in DOCS if (ROOT / name).is_file()]
+
+
 def status(today):
     entries = load_ok()
     m = metrics(entries, today)
@@ -528,6 +545,7 @@ def status(today):
         "tax": {"rate": m["tax_rate"], "need": m["tax_need"], "reserved": m["tax_reserved"]},
         "bizMonth": m["biz_month"], "months": m["months"],
         "unprocessed": m["unprocessed"], "warnings": m["warnings"],
+        "txCount": m["tx_count"], "docs": docs(),
         "week": week_read(today),
         "entry": {"businessTag": str(p.get("business-tag", "ип")),
                   "defaultAccount": str(p.get("default-account", "Assets:Liquid:Cash")),

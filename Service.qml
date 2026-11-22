@@ -32,13 +32,26 @@ Item {
   readonly property int nextStepIndex: status ? Model.nextStep(status.ladder) : -1
   readonly property var entryContext: status ? status.entry : ({accounts: [], history: {}, currencies: []})
 
+  // Language: the shell's by default; a widget setting can pick another, e.g. finances in Russian
+  // on an English desktop. Then the plugin reads its own catalog and formats numbers itself.
+  readonly property string languageSetting: /^[a-z]{2}(-[A-Z]{2})?$/.test(String(settings.language || "")) ? String(settings.language) : "auto"
+  readonly property bool ownLanguage: languageSetting !== "auto" && languageSetting !== Commons.I18n.language
+  readonly property string language: ownLanguage ? languageSetting : Commons.I18n.language
   Commons.Translations { id: catalog; directory: Qt.resolvedUrl("i18n") }
-  function t(key) { return catalog.t(key) }
-  function tn(key, count) { return catalog.tn(key, count) }
+  FileView { id: ownCatalog; path: root.ownLanguage ? Qt.resolvedUrl("i18n/" + root.languageSetting + ".json").toString().replace(/^file:\/\//, "") : ""; printErrors: false; blockLoading: true }
+  FileView { id: englishCatalog; path: root.ownLanguage ? Qt.resolvedUrl("i18n/en.json").toString().replace(/^file:\/\//, "") : ""; printErrors: false; blockLoading: true }
+  readonly property var ownStrings: ownLanguage ? safeJson(ownCatalog.text()) : null
+  readonly property var englishStrings: ownLanguage ? safeJson(englishCatalog.text()) : null
+  function safeJson(text) { try { return JSON.parse(text || "{}") } catch (error) { return {} } }
+  function t(key) { return ownLanguage ? Model.lookup(ownStrings, englishStrings, key, undefined, language) : catalog.t(key) }
+  function tn(key, count) { return ownLanguage ? Model.lookup(ownStrings, englishStrings, key, count, language) : catalog.tn(key, count) }
 
-  readonly property var locale: Qt.locale(Commons.I18n.formatLocale)
+  readonly property var locale: ownLanguage ? Qt.locale(language.replace("-", "_")) : Qt.locale(Commons.I18n.formatLocale)
   readonly property var moneyFormat: ({group: locale.groupSeparator === "," ? "," : " ", decimal: locale.decimalPoint})
-  function number(value, decimals) { return Commons.I18n.formatNumber(value, decimals) }
+  function number(value, decimals) {
+    if (!ownLanguage) return Commons.I18n.formatNumber(value, decimals)
+    return Number(value).toLocaleString(locale, "f", decimals || 0).replace(/\u00a0|\u202f/g, " ")
+  }
   function plainMoney(value, code) { return Model.formatMoney(value, code || (status ? status.currency : "RUB"), moneyFormat) }
   function money(value, code) { return amountsHidden ? "•••" : plainMoney(value, code) }
   function signed(value) { return amountsHidden ? "•••" : (value > 0 ? "+" : "") + plainMoney(value) }
@@ -214,6 +227,18 @@ Item {
   function toggleAmounts() {
     amountsHidden = !amountsHidden
     prefsWriter.save(amountsHidden ? "1\n" : "0\n")
+  }
+  readonly property string helpUrl: "https://github.com/andreiyurik/omarchy-beancount-bar#readme"
+  function docPath(key) {
+    var d = status ? status.docs.filter(function(x) { return x.key === key })[0] : null
+    return d ? d.path : ""
+  }
+  function openNote(key) { var p = docPath(key); if (p) Quickshell.execDetached(["xdg-open", Model.obsidianUrl(p)]) }
+  function openUrl(url) { Quickshell.execDetached(["xdg-open", url]) }
+  function remainingText(step) {
+    var left = Model.remaining(step)
+    if (left <= 0) return ""
+    return t(step.monthly ? "freedom.left-monthly" : "freedom.left").arg(money(left))
   }
   function openFava(path) {
     var url = favaUrl.replace(/\/$/, "") + (path || "")

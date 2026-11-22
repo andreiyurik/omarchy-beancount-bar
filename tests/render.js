@@ -11,6 +11,10 @@ fs.mkdirSync(path.join(shell, "plugin"))
 for (const file of fs.readdirSync(repo)) if (/\.(qml|js)$/.test(file)) fs.copyFileSync(path.join(repo, file), path.join(shell, "plugin", file))
 fs.cpSync(path.join(repo, "i18n"), path.join(shell, "plugin", "i18n"), {recursive: true})
 fs.cpSync(path.join(repo, "cli", "example"), ledger, {recursive: true})
+const empty = path.join(work, "empty")
+fs.cpSync(path.join(repo, "cli", "example"), empty, {recursive: true})
+fs.writeFileSync(path.join(empty, "ledger", "2026", "2026-11.bean"), "")
+fs.writeFileSync(path.join(empty, "README.md"), "# guide\n")
 
 const cases = [
   {name: "freedom", env: {VIEW: "freedom"}},
@@ -19,13 +23,17 @@ const cases = [
   {name: "entry", env: {VIEW: "freedom", INPUT: "450 кофе"}},
   {name: "markup", env: {VIEW: "freedom", INPUT: "450 <img src=x> кофе"}},
   {name: "missing", env: {VIEW: "freedom"}, settings: {command: "no-such-fin-command"}},
+  {name: "help", env: {VIEW: "help"}},
+  {name: "empty", env: {VIEW: "freedom", FIN_ROOT: empty}},
+  {name: "ru", env: {VIEW: "freedom"}, settings: {language: "ru"}},
+  {name: "ru-help", env: {VIEW: "help"}, settings: {language: "ru"}},
 ]
 let failed = false
 for (const c of cases) {
   const out = path.join(outDir, `panel-${c.name}.png`)
-  const settings = c.settings || {command: path.join(repo, "cli", "fin")}
+  const settings = {command: path.join(repo, "cli", "fin"), ...(c.settings || {})}
   const r = spawnSync("qs", ["-p", shell], {encoding: "utf8", timeout: 30000,
-    env: {...process.env, QT_QPA_PLATFORM: "offscreen", QT_QUICK_BACKEND: "software", FIN_ROOT: ledger, OUT: out, SETTINGS: JSON.stringify(settings), ...c.env}})
+    env: {...process.env, QT_QPA_PLATFORM: "offscreen", QT_QUICK_BACKEND: "software", FIN_ROOT: ledger, LANG: process.env.RENDER_LANG || process.env.LANG, OUT: out, SETTINGS: JSON.stringify(settings), ...c.env}})
   const text = (r.stdout || "") + (r.stderr || "")
   const state = (text.match(/STATE (\{.*\})/) || [])[1]
   const problem = text.match(/.*(TypeError|ReferenceError|Unable to assign|is not a function|is not defined|Cannot assign|Type .* unavailable|module .* is not installed).*/)

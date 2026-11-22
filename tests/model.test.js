@@ -66,4 +66,14 @@ assert.strictEqual(M.formatMoney(-12.5, "USD"), "−$12.50")
 assert.strictEqual(M.shortMoney(81500, {k: "%1к", m: "%1М", decimal: ","}), "82к")
 assert.strictEqual(M.leaf("Expenses:Life:EatingOut"), "Life:EatingOut")
 
+// Plurals and lookup for a language other than the shell's.
+assert.deepStrictEqual([1, 2, 5, 11, 21, 22, 25].map(n => M.pluralCategory("ru", n)), ["one", "few", "many", "many", "one", "few", "many"])
+const ru = {"a": {"one": "%1 операция", "few": "%1 операции", "many": "%1 операций", "other": "%1 операции"}}, enC = {"a": "x", "b": "only english"}
+assert.strictEqual(M.lookup(ru, enC, "a", 5, "ru"), "%1 операций")
+assert.strictEqual(M.lookup(ru, enC, "b", undefined, "ru"), "only english")
+assert.strictEqual(M.lookup(ru, enC, "zzz", undefined, "ru"), "zzz")
+assert.strictEqual(M.remaining({done: false, progress: 0.4, have: 40, need: 100}), 60)
+assert.strictEqual(M.remaining({done: true, progress: 1, have: 100, need: 100}), 0)
+assert.strictEqual(M.obsidianUrl("/x/00 Конституция.md"), "obsidian://open?path=%2Fx%2F00%20%D0%9A%D0%BE%D0%BD%D1%81%D1%82%D0%B8%D1%82%D1%83%D1%86%D0%B8%D1%8F.md")
+
 console.log("model tests passed")

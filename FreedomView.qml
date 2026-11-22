@@ -11,7 +11,40 @@ Column {
   readonly property var st: service ? service.status : null
   readonly property int next: service ? service.nextStepIndex : -1
   readonly property var step: st && next >= 0 ? st.ladder[next] : null
+  readonly property bool empty: !!st && st.txCount === 0
+  signal helpRequested()
   spacing: Style.space(12)
+
+  // A new ledger has nothing to measure yet: say what to do first instead of showing dashes.
+  Rectangle {
+    width: parent.width
+    visible: root.empty
+    height: startColumn.implicitHeight + Style.space(24)
+    radius: Style.cornerRadius
+    color: Util.alpha(Commons.Color.accent, 0.10)
+    Column {
+      id: startColumn
+      x: Style.space(12); y: Style.space(12)
+      width: parent.width - Style.space(24)
+      spacing: Style.space(8)
+      Txt { width: parent.width; font.bold: true; text: root.service ? root.service.t("start.title") : "" }
+      Hint { width: parent.width; wrapMode: Text.Wrap; color: Commons.Color.popups.text; text: root.service ? root.service.t("start.body") : "" }
+      Row {
+        spacing: Style.space(6)
+        Ui.Button {
+          foreground: Commons.Color.popups.text; bordered: true
+          visible: !!root.service && root.service.docPath("guide") !== ""
+          text: root.service ? root.service.t("help.note.guide") : ""
+          onClicked: root.service.openNote("guide")
+        }
+        Ui.Button {
+          foreground: Commons.Color.popups.text; bordered: true
+          text: root.service ? root.service.t("action.help") : ""
+          onClicked: root.helpRequested()
+        }
+      }
+    }
+  }
 
   Column {
     width: parent.width
@@ -34,7 +67,12 @@ Column {
         text: root.step && root.step.progress !== null ? root.service.percent(root.step.progress) : ""
       }
     }
-    Meter { width: parent.width; visible: !!root.step; ratio: root.step && root.step.progress !== null ? root.step.progress : 0 }
+    Meter { width: parent.width; visible: !!root.step && !root.empty; ratio: root.step && root.step.progress !== null ? root.step.progress : 0 }
+    Txt {
+      width: parent.width
+      visible: text !== "" && !root.empty
+      text: root.service && root.step ? root.service.remainingText(root.step) : ""
+    }
     Hint {
       width: parent.width
       wrapMode: Text.Wrap
@@ -73,6 +111,7 @@ Column {
 
   Grid {
     width: parent.width
+    visible: !root.empty
     columns: 2
     rowSpacing: Style.space(12)
     readonly property real cell: width / 2

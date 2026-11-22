@@ -11,6 +11,8 @@ Column {
   property string view: "freedom"
   property string scope: "all"
   property string error: ""
+  property bool allBanners: false
+  readonly property bool helpOpen: view === "help"
   readonly property Item focusItem: input
   readonly property bool editing: input.activeFocus
   readonly property var st: service ? service.status : null
@@ -19,14 +21,19 @@ Column {
     if (!service) return []
     var out = []
     if (service.problem) out.push({text: service.problemText() + (st ? " " + service.t("banner.last-data") : ""), detail: service.problem.message})
-    if (st) st.warnings.forEach(function(w) { var text = service.warningText(w); if (text) out.push({text: text}) })
+    if (st) st.warnings.forEach(function(w) {
+      if (w.key === "little-data" && st.txCount === 0) return  // the start card says it better
+      var text = service.warningText(w)
+      if (text) out.push({text: text})
+    })
     return out
   }
   signal closeRequested()
   spacing: Style.space(14)
 
-  function reset() { error = ""; view = "freedom" }
+  function reset() { error = ""; view = "freedom"; allBanners = false }
   function switchView() { view = view === "freedom" ? "month" : "freedom" }
+  function toggleHelp() { view = helpOpen ? "freedom" : "help"; input.forceActiveFocus() }
   function submit() {
     if (!service || service.saving) return
     error = ""
@@ -70,9 +77,10 @@ Column {
       enabled: !root.service || !root.service.saving
       onAccepted: root.submit()
       onTextEdited: root.error = ""
-      Keys.onEscapePressed: root.closeRequested()
-      Keys.onTabPressed: root.switchView()
-      Keys.onBacktabPressed: root.switchView()
+      Keys.onEscapePressed: root.helpOpen ? root.toggleHelp() : root.closeRequested()
+      Keys.onPressed: function(event) { if (event.key === Qt.Key_F1) { root.toggleHelp(); event.accepted = true } }
+      Keys.onTabPressed: if (!root.helpOpen) root.switchView()
+      Keys.onBacktabPressed: if (!root.helpOpen) root.switchView()
       Keys.onUpPressed: if (input.text === "" && root.st && root.st.week) root.service.bumpWeek(1)
       Keys.onDownPressed: if (input.text === "" && root.st && root.st.week) root.service.bumpWeek(-1)
     }
@@ -85,22 +93,28 @@ Column {
     }
   }
 
+  // Notes about the ledger: two at most, the rest one click away, so the numbers stay on top.
+  Column {
+    width: parent.width
+    spacing: Style.space(4)
+    visible: root.banners.length > 0 && !root.helpOpen
   Repeater {
-    model: root.banners
+    model: root.allBanners ? root.banners : root.banners.slice(0, 2)
     Rectangle {
       id: banner
       required property var modelData
       width: parent.width
-      height: bannerText.implicitHeight + Style.space(14)
+      height: bannerText.implicitHeight + Style.space(10)
       radius: Style.cornerRadius
-      color: Util.alpha(Commons.Color.popups.text, 0.1)
+      color: Util.alpha(Commons.Color.popups.text, 0.08)
       Hint {
         id: bannerText
-        anchors.centerIn: parent
+        anchors.verticalCenter: parent.verticalCenter
+        x: Style.space(10)
         width: parent.width - Style.space(20)
         wrapMode: Text.Wrap
         color: Commons.Color.popups.text
-        text: banner.modelData.text
+        text: "• " + banner.modelData.text
       }
       Ui.PanelToolTip {
         visible: bannerHover.containsMouse && !!banner.modelData.detail
@@ -109,11 +123,19 @@ Column {
       MouseArea { id: bannerHover; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
     }
   }
+    Hint {
+      visible: root.banners.length > 2
+      leftPadding: Style.space(10)
+      color: moreArea.containsMouse ? Commons.Color.accent : Util.alpha(Commons.Color.popups.text, 0.65)
+      text: !root.service ? "" : root.allBanners ? root.service.t("banner.less") : root.service.tn("banner.more", root.banners.length - 2).arg(root.banners.length - 2)
+      MouseArea { id: moreArea; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: root.allBanners = !root.allBanners }
+    }
+  }
 
   Item {
     width: parent.width
     height: viewSwitch.implicitHeight
-    visible: !!root.st
+    visible: !!root.st && !root.helpOpen
     Ui.ButtonGroup {
       id: viewSwitch
       focusable: false
@@ -133,7 +155,15 @@ Column {
     }
   }
 
-  FreedomView { width: parent.width; visible: !!root.st && root.view === "freedom"; service: root.service }
+  FreedomView {
+    width: parent.width; visible: !!root.st && root.view === "freedom"; service: root.service
+    onHelpRequested: root.toggleHelp()
+  }
+  HelpView {
+    width: parent.width; visible: root.helpOpen; service: root.service
+    onTryRequested: function(text) { root.view = "freedom"; root.prefill(text) }
+    onCloseRequested: root.closeRequested()
+  }
   MonthView {
     width: parent.width; visible: !!root.st && root.view === "month"; service: root.service; scope: root.scope
     onCommandRequested: function(text) { root.prefill(text) }
@@ -171,6 +201,11 @@ Column {
         enabled: !!root.service && !root.service.busy
         tooltipText: root.service ? root.service.t("action.refresh") : ""
         onClicked: root.service.refresh()
+      }
+      Ui.PanelActionButton {
+        iconText: root.helpOpen ? "󰅖" : "󰋗"; foreground: Commons.Color.popups.text
+        tooltipText: root.service ? root.service.t(root.helpOpen ? "action.help-close" : "action.help") : ""
+        onClicked: root.toggleHelp()
       }
       Ui.PanelActionButton {
         iconText: "󰏌"; foreground: Commons.Color.popups.text

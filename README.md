@@ -4,9 +4,9 @@ Your [Beancount](https://github.com/beancount/beancount) ledger in the [Omarchy]
 
 This is an unofficial plugin and is not affiliated with the Beancount or Fava projects.
 
-| Freedom | Month |
-| --- | --- |
-| ![Freedom](docs/freedom.png) | ![Month](docs/month.png) |
+| Freedom | Month | Help |
+| --- | --- | --- |
+| ![Freedom](docs/freedom.png) | ![Month](docs/month.png) | ![Help](docs/help.png) |
 
 ## What you get
 
@@ -16,6 +16,7 @@ This is an unofficial plugin and is not affiliated with the Beancount or Fava pr
 - **Month:** six months of income and spending, or business revenue and costs; the business this month with a tax reserve; one action of the week with a counter.
 - **One-line entry:** type, check the preview, press Enter. Undo from the panel or the notification.
 - **Fava** one click away as a web app.
+- **Help** behind the ? button or F1: the entry line with clickable examples, the keys, and links to your own notes in Obsidian (a guide, a constitution, the ladder, an investment policy, whichever exist next to the ledger).
 
 ## Install
 
@@ -54,7 +55,20 @@ AMOUNT [CURRENCY] description [@from] [>category] [#tag] [yesterday]
 
 Every entry goes to `ledger/inbox.bean` and is checked by Beancount before it stays. If the ledger would break, nothing is written.
 
-Keys: Enter saves, Tab switches Freedom and Month, Esc closes, ↑/↓ on an empty line count the action of the week, middle click on the bar refreshes.
+Keys: Enter saves, Tab switches Freedom and Month, F1 opens help, Esc closes, ↑/↓ on an empty line count the action of the week, middle click on the bar refreshes.
+
+## Settings
+
+| Setting | Default | |
+| --- | --- | --- |
+| `command` | `fin` | the command that answers the contract below |
+| `favaUrl` | `http://localhost:5000` | opened as a web app |
+| `language` | `auto` | `auto` follows Omarchy; `ru` or `en` shows only this panel in that language |
+| `autoRefresh`, `refreshMinutes` | on, 10 | background refresh |
+
+## Notes in Obsidian
+
+`fin status` lists the notes it finds next to the ledger (`README.md`, `00 Конституция.md`, `01 Инвестиционная политика.md`, `02 Лестница свободы.md` in the reference `fin`). The help view opens them with `obsidian://open?path=…`, which works once that folder is opened in Obsidian as a vault.
 
 ## The `fin` contract
 

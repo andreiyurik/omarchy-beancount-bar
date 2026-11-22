@@ -9,6 +9,7 @@ var DATE_WORDS = {"вчера": 1, "yesterday": 1, "позавчера": 2}
 var WEEK_WORDS = ["week", "неделя"]
 var AMOUNT_RE = /^(\+?)([$€₽]?)(\d+(?:[.,]\d{1,2})?)([кkКK]?)([$€₽]?)$/
 var MAX_TEXT = 200
+var DOC_KEYS = ["guide", "constitution", "policy", "ladder"]
 
 function num(value) { var n = Number(value); return isFinite(n) ? n : 0 }
 function str(value, limit) { return String(value === undefined || value === null ? "" : value).slice(0, limit || MAX_TEXT) }
@@ -36,7 +37,8 @@ function readStatus(text) {
     runway: raw.runway === null ? null : num(raw.runway), assetIncome: num(raw.assetIncome),
     ladder: (raw.ladder || []).slice(0, 12).map(function(s) {
       return {key: str(s.key, 40), done: s.done === true, progress: s.progress === null ? null : Math.max(0, Math.min(1, num(s.progress))),
-              months: num(s.months), share: num(s.share), capital: num(s.capital)}
+              months: num(s.months), share: num(s.share), capital: num(s.capital),
+              have: num(s.have), need: num(s.need), monthly: s.monthly === true}
     }),
     tax: {rate: num((raw.tax || {}).rate), need: num((raw.tax || {}).need), reserved: num((raw.tax || {}).reserved)},
     bizMonth: {revenue: num((raw.bizMonth || {}).revenue), expenses: num((raw.bizMonth || {}).expenses), profit: num((raw.bizMonth || {}).profit)},
@@ -44,6 +46,10 @@ function readStatus(text) {
       return {month: str(m.month, 7), income: num(m.income), living: num(m.living), bizRevenue: num(m.biz_revenue), bizExpenses: num(m.biz_expenses)}
     }),
     unprocessed: num(raw.unprocessed),
+    txCount: num(raw.txCount),
+    docs: (raw.docs || []).slice(0, 10).filter(function(d) {
+      return d && DOC_KEYS.indexOf(d.key) >= 0 && /^\/[^\0]*\.md$/.test(String(d.path)) && String(d.path).length < 500
+    }).map(function(d) { return {key: d.key, path: String(d.path)} }),
     warnings: (raw.warnings || []).slice(0, 10).map(function(w) {
       return {key: str(w.key, 40), count: num(w.count), days: num(w.days), amount: num(w.amount), share: num(w.share), limit: num(w.limit),
               currencies: (w.currencies || []).slice(0, 10).map(function(c) { return str(c, 12) })}
@@ -169,6 +175,38 @@ function shortMoney(value, format) {
   return sign + text(Math.round(n))
 }
 
+// CLDR plural category for the languages this plugin ships (others fall back to one/other).
+function pluralCategory(lang, n) {
+  var base = String(lang || "en").split("-")[0], i = Math.floor(Math.abs(n))
+  if (base === "ru" || base === "uk") {
+    if (n !== i) return "other"
+    if (i % 10 === 1 && i % 100 !== 11) return "one"
+    if (i % 10 >= 2 && i % 10 <= 4 && (i % 100 < 12 || i % 100 > 14)) return "few"
+    return "many"
+  }
+  return n === 1 ? "one" : "other"
+}
+
+// A catalog lookup with English fallback, for when the plugin's language differs from the shell's.
+function lookup(catalog, english, key, count, lang) {
+  var layers = [[catalog, lang], [english, "en"]]
+  for (var i = 0; i < layers.length; ++i) {
+    var v = layers[i][0] ? layers[i][0][key] : undefined
+    if (v && typeof v === "object") v = count === undefined ? v.other : (v[pluralCategory(layers[i][1], count)] || v.other)
+    if (typeof v === "string" && v.length) return v
+  }
+  return key
+}
+
+// What is left to reach a step, in money; 0 when done or unknown.
+function remaining(step) {
+  if (!step || step.done || step.progress === null) return 0
+  return Math.max(0, step.need - step.have)
+}
+
+// Obsidian opens a note by its absolute path when its folder is a vault (obsidian.md/help/uri).
+function obsidianUrl(path) { return "obsidian://open?path=" + encodeURIComponent(path) }
+
 // The step being climbed: the first one not done. -1 when every step is done.
 function nextStep(ladder) {
   for (var i = 0; i < ladder.length; ++i) if (!ladder[i].done) return i
@@ -186,4 +224,5 @@ function barText(status) {
 }
 
 if (typeof module !== "undefined") module.exports = {readStatus: readStatus, parseEntry: parseEntry, parseCommand: parseCommand, matchAccount: matchAccount,
-  formatMoney: formatMoney, shortMoney: shortMoney, nextStep: nextStep, barText: barText, leaf: leaf, iso: iso}
+  formatMoney: formatMoney, shortMoney: shortMoney, nextStep: nextStep, barText: barText, leaf: leaf, iso: iso,
+  remaining: remaining, obsidianUrl: obsidianUrl, pluralCategory: pluralCategory, lookup: lookup}
