@@ -27,6 +27,9 @@ Item {
   readonly property string command: String(settings.command || "fin")
   readonly property string favaUrl: String(settings.favaUrl || "http://localhost:5000")
   readonly property bool autoRefresh: settings.autoRefresh !== false
+  readonly property string barShows: settings.barShows === "freedom" ? "freedom" : "growth"
+  property var seenWins: null            // keys of wins already announced; null until the file is read
+  property bool seenChecked: false
   readonly property int refreshMinutes: Math.max(1, Math.min(120, Number(settings.refreshMinutes) || 10))
   readonly property string configDir: (Quickshell.env("HOME") || "") + "/.config/beancount-bar"
   readonly property int nextStepIndex: status ? Model.nextStep(status.ladder) : -1
@@ -85,7 +88,30 @@ Item {
     if (problem.key === "schema") return t("error.schema")
     return t("error.failed")
   }
-  function barText() { return Model.barText(status) }
+  readonly property var shortFormat: ({k: t("short.k"), m: t("short.m"), decimal: locale.decimalPoint})
+  function shortMoney(value) { return amountsHidden ? "•••" : Model.shortMoney(value, shortFormat) }
+  function barText() {
+    if (!status) return Model.barText(status)
+    if (barShows === "freedom" || !status.growth) return Model.barText(status)
+    var g = status.growth
+    if (amountsHidden) return g.goal ? (g.goal.reached ? "★" : Math.floor(g.goal.progress * 100) + "%") : g.delta !== null ? (g.delta >= 0 ? "▲" : "▼") + Math.abs(g.delta) + "%" : "◎"
+    return Model.growthBarText(g, shortFormat)
+  }
+  function sourceName(name) {
+    var parts = String(name).split(":")
+    var kind = {Business: t("source.business"), Streams: t("source.stream"), Active: t("source.work"), Passive: t("source.assets")}[parts[0]] || parts[0]
+    return parts[1] && parts[1] !== "Uncategorized" ? kind + " · " + parts[1] : kind
+  }
+  function winText(w) {
+    if (w.kind === "lifetime") return t("win.lifetime").arg(money(w.amount))
+    if (w.kind === "record") return t("win.record").arg(monthName(w.month))
+    if (w.kind === "growth3") return t("win.growth3")
+    if (w.kind === "two-sources") return t("win.two-sources")
+    if (w.kind === "goal") return t("win.goal").arg(money(w.amount))
+    if (w.kind === "stage") return t("win.stage").arg(money(w.amount))
+    if (w.kind === "first-income") return t("win.first-income")
+    return ""
+  }
   function shortAccount(name) { return Model.leaf(name) }
   function updatedText() {
     if (updatedAt.getTime() === 0) return ""
@@ -142,6 +168,13 @@ Item {
     stdout: StdioCollector { onStreamFinished: if (text.trim() === "undo") root.undoLast() }
   }
   PrivateFile { id: prefsWriter; path: root.configDir + "/hide-amounts" }
+  PrivateFile { id: seenWriter; path: root.configDir + "/seen-wins.json" }
+  FileView {
+    path: root.configDir + "/seen-wins.json"
+    printErrors: false
+    onLoaded: { try { var v = JSON.parse(text()); root.seenWins = Array.isArray(v) ? v.slice(-500).map(String) : [] } catch (e) { root.seenWins = [] } root.seenChecked = true; root.announceWins() }
+    onLoadFailed: { root.seenChecked = true; root.announceWins() }
+  }
   FileView {
     path: root.configDir + "/hide-amounts"
     printErrors: false
@@ -175,12 +208,25 @@ Item {
     if (r.ok && code === 0) {
       status = r
       problem = null
+      announceWins()
       updatedAt = new Date()
       now = updatedAt
       return
     }
     if (code === 127 || (!out && /not found|No such file/i.test(err))) problem = {key: "not-found", message: ""}
     else problem = {key: r.error === "ledger" ? "ledger" : r.error === "schema" ? "schema" : "failed", message: r.message || String(err).slice(0, 2000)}
+  }
+
+  // New wins get one notification each (three at most at once); the first run only remembers them.
+  function announceWins() {
+    if (!seenChecked || !status || !status.growth) return
+    var keys = status.growth.wins.map(function(w) { return w.key })
+    if (seenWins === null) { seenWins = keys; seenWriter.save(JSON.stringify(keys)); return }
+    var fresh = Model.freshWins(seenWins, status.growth.wins)
+    if (!fresh.length) return
+    fresh.slice(-3).forEach(function(w) { var text = winText(w); if (text) notify(t("win.title"), text) })
+    seenWins = seenWins.concat(fresh.map(function(w) { return w.key })).slice(-500)
+    seenWriter.save(JSON.stringify(seenWins))
   }
 
   function write(args, done) {
@@ -196,6 +242,7 @@ Item {
     var preview = parseInput(text)
     if (!preview || !preview.ok) { done(false, t("entry." + (preview ? preview.error : "empty"))); return }
     if (preview.kind === "week") { runWeek(preview.args, done); return }
+    if (preview.kind === "goal") { runCommand(["goal"], preview.args, done); return }
     write(["add", "--json", "--", String(text).trim()], function(ok, out) {
       var r = parse(out)
       if (!ok || !r || !r.entry) { done(false, r && r.message ? String(r.message).split("\n")[0] : t("entry.failed")); return }
@@ -214,10 +261,11 @@ Item {
       else notify(t("notice.undo-failed"), gone.narration)
     })
   }
-  function runWeek(args, done) {
-    write(["week", "--json", "--"].concat(args), function(ok, out) {
+  function runWeek(args, done) { runCommand(["week"], args, done) }
+  function runCommand(name, args, done) {
+    write(name.concat(["--json", "--"]).concat(args), function(ok, out) {
       var r = parse(out)
-      if (done) done(ok, ok ? "" : (r && r.message ? String(r.message) : t("entry.week-format")))
+      if (done) done(ok, ok ? "" : (r && r.message ? String(r.message).split("\n")[0] : t("entry.failed")))
       if (ok) refresh()
     })
   }

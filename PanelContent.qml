@@ -8,7 +8,7 @@ import qs.Ui as Ui
 Column {
   id: root
   property var service: null
-  property string view: "freedom"
+  property string view: "growth"
   property string scope: "all"
   property string error: ""
   property bool allBanners: false
@@ -31,9 +31,10 @@ Column {
   signal closeRequested()
   spacing: Style.space(14)
 
-  function reset() { error = ""; view = "freedom"; allBanners = false }
-  function switchView() { view = view === "freedom" ? "month" : "freedom" }
-  function toggleHelp() { view = helpOpen ? "freedom" : "help"; input.forceActiveFocus() }
+  readonly property var views: ["growth", "freedom", "month"]
+  function reset() { error = ""; view = "growth"; allBanners = false }
+  function switchView(step) { var i = views.indexOf(view); view = views[(i + (step || 1) + views.length) % views.length] }
+  function toggleHelp() { view = helpOpen ? "growth" : "help"; input.forceActiveFocus() }
   function submit() {
     if (!service || service.saving) return
     error = ""
@@ -55,6 +56,7 @@ Column {
     if (error) return error
     if (!p) return s.t("input.hint")
     if (!p.ok) { var msg = s.t("entry." + p.error); return msg.indexOf("%1") >= 0 ? msg.arg(p.amount || p.query || "") : msg }
+    if (p.kind === "goal") return p.off ? s.t("command.goal-off") : s.t("command.goal").arg(s.plainMoney(p.amount, p.currency))
     if (p.kind === "week") {
       if (p.target) return s.t("command.week").arg(p.target).arg(p.text)
       return p.args[0] === "clear" ? s.t("command.week-clear") : s.t("command.week-bump").arg(p.args[0])
@@ -80,7 +82,7 @@ Column {
       Keys.onEscapePressed: root.helpOpen ? root.toggleHelp() : root.closeRequested()
       Keys.onPressed: function(event) { if (event.key === Qt.Key_F1) { root.toggleHelp(); event.accepted = true } }
       Keys.onTabPressed: if (!root.helpOpen) root.switchView()
-      Keys.onBacktabPressed: if (!root.helpOpen) root.switchView()
+      Keys.onBacktabPressed: if (!root.helpOpen) root.switchView(-1)
       Keys.onUpPressed: if (input.text === "" && root.st && root.st.week) root.service.bumpWeek(1)
       Keys.onDownPressed: if (input.text === "" && root.st && root.st.week) root.service.bumpWeek(-1)
     }
@@ -141,7 +143,7 @@ Column {
       focusable: false
       foreground: Commons.Color.popups.text
       value: root.view
-      options: root.service ? [{value: "freedom", label: root.service.t("view.freedom")}, {value: "month", label: root.service.t("view.month")}] : []
+      options: root.service ? root.views.map(function(v) { return {value: v, label: root.service.t("view." + v)} }) : []
       onChanged: function(value) { root.view = value; input.forceActiveFocus() }
     }
     Ui.ButtonGroup {
@@ -155,13 +157,17 @@ Column {
     }
   }
 
+  GrowthView {
+    width: parent.width; visible: !!root.st && root.view === "growth"; service: root.service
+    onCommandRequested: function(text) { root.prefill(text) }
+  }
   FreedomView {
     width: parent.width; visible: !!root.st && root.view === "freedom"; service: root.service
     onHelpRequested: root.toggleHelp()
   }
   HelpView {
     width: parent.width; visible: root.helpOpen; service: root.service
-    onTryRequested: function(text) { root.view = "freedom"; root.prefill(text) }
+    onTryRequested: function(text) { root.view = "growth"; root.prefill(text) }
     onCloseRequested: root.closeRequested()
   }
   MonthView {

@@ -28,9 +28,11 @@ for (const key of ["no-debt", "reserve-min", "reserve-target", "asset-share", "a
   assert("freedom.why." + key in en, key)
 }
 for (const key of ["unprocessed", "tax-gap", "crypto-limit", "missing-price", "little-data"]) assert("warn." + key in en, key)
-for (const key of ["spend", "inbox", "income", "category", "account", "currency", "week"]) for (const part of ["code", "text"]) assert(`help.ex.${key}.${part}` in en, key)
+for (const key of ["spend", "inbox", "income", "goal", "category", "account", "currency", "week"]) for (const part of ["code", "text"]) assert(`help.ex.${key}.${part}` in en, key)
 for (const key of ["enter", "tab", "esc", "arrows", "middle"]) for (const part of ["code", "text"]) assert(`help.key.${key}.${part}` in en, key)
 for (const key of ["guide", "constitution", "ladder", "policy"]) assert("help.note." + key in en, key)
+for (const key of ["growth", "freedom", "month"]) assert("view." + key in en, key)
+for (const key of ["lifetime", "record", "growth3", "two-sources", "goal", "stage", "first-income"]) assert("win." + key in en, key)
 
 // Text from the ledger must never be interpreted as rich text.
 for (const file of qml) {

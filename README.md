@@ -4,13 +4,14 @@ Your [Beancount](https://github.com/beancount/beancount) ledger in the [Omarchy]
 
 This is an unofficial plugin and is not affiliated with the Beancount or Fava projects.
 
-| Freedom | Month | Help |
-| --- | --- | --- |
-| ![Freedom](docs/freedom.png) | ![Month](docs/month.png) | ![Help](docs/help.png) |
+| Growth | Freedom | Month | Help |
+| --- | --- | --- | --- |
+| ![Growth](docs/growth.png) | ![Freedom](docs/freedom.png) | ![Month](docs/month.png) | ![Help](docs/help.png) |
 
 ## What you get
 
-- **In the bar:** the step of the freedom ladder you are on and how far along it is, for example `1 · 44%`. A dot means entries wait to be sorted. Never red: being early on the ladder is not a failure.
+- **In the bar:** this month's income and the goal, for example `105k · 70%`, or against last month (`42k ▲18%`), or `★` for a record month. Never red: a slow start of the month is not a failure.
+- **Growth:** income this month as a race. With a goal: stages, an even-pace mark and how much is left to the next stage. Without one: the same day of last month and the best month. Below: where the money comes from, what this month adds to your reserve, lifetime milestones and recent wins. Each new win gets one notification.
 - **Freedom ladder:** 0 no debt with interest → 1 reserve of 6 months → 2 reserve of 12 months → 3 assets pay 25% of spending → 4 assets pay the fixed costs → 5 freedom capital (a year of spending divided by a 3.5% withdrawal rate). The numbers come from your ledger, not from the plugin.
 - **Four numbers:** net worth, runway, savings rate against your goal, income from assets per month.
 - **Month:** six months of income and spending, or business revenue and costs; the business this month with a tax reserve; one action of the week with a counter.
@@ -52,6 +53,7 @@ AMOUNT [CURRENCY] description [@from] [>category] [#tag] [yesterday]
 | `12 usd hosting`, `$12 hosting` | another currency |
 | `450 coffee @cash yesterday` | `@` picks the account by its `short:` alias or name |
 | `week 10 client offers` | sets the action of the week; ↑ and ↓ count it |
+| `goal 500000`, `goal 7000 usd`, `goal off` | the monthly income goal |
 
 Every entry goes to `ledger/inbox.bean` and is checked by Beancount before it stays. If the ledger would break, nothing is written.
 
@@ -63,6 +65,7 @@ Keys: Enter saves, Tab switches Freedom and Month, F1 opens help, Esc closes, �
 | --- | --- | --- |
 | `command` | `fin` | the command that answers the contract below |
 | `favaUrl` | `http://localhost:5000` | opened as a web app |
+| `barShows` | `growth` | `growth`: income and the goal; `freedom`: the ladder step |
 | `language` | `auto` | `auto` follows Omarchy; `ru` or `en` shows only this panel in that language |
 | `autoRefresh`, `refreshMinutes` | on, 10 | background refresh |
 
@@ -80,6 +83,7 @@ The plugin calls only these, with arguments as a list, never through a shell. An
 | `fin add --json -- "<line>"` | `{"ok": true, "entry": {id, date, amount, currency, narration, account, source, income}}` |
 | `fin undo --json <id>` | `{"ok": true, "narration": ...}` |
 | `fin week --json -- <target> <text…>` / `+1` / `-1` / `clear` | `{"ok": true, "week": {...}}` |
+| `fin goal --json -- <amount> [currency]` / `off` | `{"ok": true, "goal": {amount, currency}}` |
 
 On failure: exit code 1 and `{"schema": 1, "ok": false, "error": "<code>", "message": "..."}`. The exact fields are in `cli/fin.py` (`status()`), and `tests/contract.test.js` runs the panel's preview and `fin.py` on the same lines.
 

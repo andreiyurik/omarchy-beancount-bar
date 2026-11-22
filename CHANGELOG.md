@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0
+
+- **Growth** comes first: this month's income as a race against a monthly goal broken into stages with an even-pace mark, or against the same day of last month and the best month.
+- Where the money comes from: every source of income against last month.
+- Lifetime milestones from 10 000 to 30 000 000, and what this month adds to the freedom ladder ("adds 1.2 months of reserve; about 2.5 such months to the next step").
+- Wins get one desktop notification each: a stage, the goal, a record month, three months of growth, a second source of income, a lifetime milestone. Nothing for falling behind.
+- Set the goal from the entry line: `goal 500000`, `goal 7000 usd`, `goal off` (stored in the ledger as `fin-param`, so goals keep their history).
+- The bar shows income and the goal by default (`105k · 70%`); `barShows: freedom` brings back the ladder step.
+
 ## 0.2.1
 
 - Every step of the ladder is listed by name, with what it asks for; hover a later step to see what it gives.

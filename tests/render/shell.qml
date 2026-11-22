@@ -20,7 +20,7 @@ ShellRoot {
         id: content
         x: 20; y: 20; width: 420
         service: s
-        view: Quickshell.env("VIEW") || "freedom"
+        view: Quickshell.env("VIEW") || "growth"
         scope: Quickshell.env("SCOPE") || "all"
         Component.onCompleted: if (Quickshell.env("INPUT")) prefill(Quickshell.env("INPUT"))
       }

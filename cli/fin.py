@@ -5,6 +5,7 @@
   fin add 450 кофе @нал       быстрый ввод одной строкой (подробно: fin add --help)
   fin undo                    отменить последний быстрый ввод
   fin week 10 предложений     действие недели; fin week +1 / -1 / clear
+  fin goal 500000 | 7000 usd  цель дохода на месяц; fin goal off
   fin prices                  дописать курсы ЦБ РФ (USD, EUR) на последнюю дату
   fin review [ГГГГ-ММ]        создать заметку обзора месяца (по умолчанию — прошлый)
   fin status --json           всё для панели Omarchy одним JSON (контракт schema 1)
@@ -219,6 +220,7 @@ def metrics(entries, today):
         "living": living, "fixed": fixed, "income": income, "asset_income": asset_income,
         "savings_rate": (income - living) / income if income > 0 else None,
         "runway": liquid / living if living > 0 else None,
+        "living_mtd": mtd["living"],
         "biz_month": {"revenue": -mtd["biz_revenue"], "expenses": mtd["biz_exp"],
                       "profit": -mtd["biz_revenue"] - mtd["biz_exp"]},
         "months": [{"month": k,
@@ -283,6 +285,137 @@ def warnings(m, p):
         w.append({"key": "little-data", "days": m["data_days"]})
     return w
 
+
+
+# ---------- рост дохода ----------
+
+LIFETIME = [1, 10_000, 50_000, 100_000, 300_000, 500_000, 1_000_000, 3_000_000, 10_000_000, 30_000_000]
+NICE = [1, 1.5, 2, 2.5, 3, 4, 5, 7.5, 10]
+
+
+def goal_stages(target):
+    """Круглые этапы до цели: 500 000 → 125к, 250к, 375к, 500к (как в sure-bar)."""
+    if target < 4:
+        return [target]
+    raw = target / 4
+    mag = Decimal(10) ** int(raw.log10().to_integral_value(rounding="ROUND_FLOOR"))
+    step = next(Decimal(str(n)) * mag for n in NICE if Decimal(str(n)) * mag >= raw)
+    stages, v = [], step
+    while v < target:
+        stages.append(v)
+        v += step
+    return stages + [target]
+
+
+def days_in_month(y, m):
+    return (dt.date(y + m // 12, m % 12 + 1, 1) - dt.timedelta(days=1)).day
+
+
+def growth(entries, today, conv, p, m):
+    """Всё для вкладки «Рост»: доход месяца, гонка с прошлым месяцем, рекорд, цель, вехи, источники."""
+    events = []  # (дата, источник, рубли) — каждый доход
+    for t in entries:
+        if isinstance(t, data.Transaction) and t.date <= today:
+            for x in t.postings:
+                if x.account.startswith("Income:"):
+                    v = -conv.rub(x.units, t.date)
+                    if v:
+                        events.append((t.date, ":".join(x.account.split(":")[1:3]), v))
+    events.sort(key=lambda e: e[0])
+    cur_key = month_key(today)
+    py, pm = (today.year, today.month - 1) if today.month > 1 else (today.year - 1, 12)
+    prev_key = f"{py}-{pm:02d}"
+    same_day = min(today.day, days_in_month(py, pm))
+
+    by_month = defaultdict(Decimal)
+    by_source = defaultdict(lambda: defaultdict(Decimal))
+    current = prev_same = Decimal(0)
+    for d, src, v in events:
+        k = month_key(d)
+        by_month[k] += v
+        by_source[src][k] += v
+        if k == cur_key:
+            current += v
+        elif k == prev_key and d.day <= same_day:
+            prev_same += v
+
+    past = {k: v for k, v in by_month.items() if k < cur_key and v > 0}
+    record = None
+    if past:
+        rk = max(past, key=lambda k: past[k])
+        record = {"month": rk, "amount": past[rk]}
+
+    # Цель месяца (в своей валюте) → рубли по курсу на сегодня.
+    goal = None
+    amount, currency = dec(p, "income-goal", 0), str(p.get("income-goal-currency", BASE))
+    if amount > 0:
+        rate = conv.rate(currency, today)
+        if rate is not None:
+            target = amount * rate
+            stages = goal_stages(target)
+            ahead = [s for s in stages if s > current]
+            dim = days_in_month(today.year, today.month)
+            goal = {"target": target, "amount": amount, "currency": currency, "stages": stages,
+                    "passed": len(stages) - len(ahead), "reached": current >= target,
+                    "progress": min(current / target, Decimal(1)), "over": max(current - target, Decimal(0)),
+                    "stage": {"target": ahead[0], "remaining": ahead[0] - current} if ahead else None,
+                    "pace": target * today.day / dim}
+
+    # Вехи за всё время: дата, когда накопленный доход перешёл порог.
+    total, milestones, i = Decimal(0), [], 0
+    for d, _, v in events:
+        total += v
+        while i < len(LIFETIME) and total >= LIFETIME[i]:
+            milestones.append({"target": Decimal(LIFETIME[i]), "date": d})
+            i += 1
+    nxt = {"target": Decimal(LIFETIME[i]), "remaining": Decimal(LIFETIME[i]) - total} if i < len(LIFETIME) else None
+
+    sources = []
+    for src, months in by_source.items():
+        c, pv = months.get(cur_key, Decimal(0)), months.get(prev_key, Decimal(0))
+        if c > 0 or pv > 0:
+            sources.append({"name": src, "current": c, "previous": pv})
+    sources.sort(key=lambda s: (s["current"], s["previous"]), reverse=True)
+
+    # Достижения: только хорошие события, у каждого свой ключ — панель уведомит о новых один раз.
+    wins = []
+    if events:
+        wins.append({"key": "first-income", "date": events[0][0]})
+    for ms in milestones:
+        if ms["target"] > 1:
+            wins.append({"key": f"lifetime-{int(ms['target'])}", "kind": "lifetime", "amount": ms["target"], "date": ms["date"]})
+    full = sorted(k for k in by_month if k < cur_key)
+    for a, b, c in zip(full, full[1:], full[2:]):
+        if 0 < by_month[a] < by_month[b] < by_month[c]:
+            wins.append({"key": f"growth3-{c}", "kind": "growth3", "month": c})
+    multi = [k for k in sorted(by_month) if sum(1 for s in by_source.values() if s.get(k, 0) > 0) >= 2]
+    if multi:
+        wins.append({"key": "two-sources", "kind": "two-sources", "month": multi[0]})
+    if record and current > record["amount"]:
+        wins.append({"key": f"record-{cur_key}", "kind": "record", "month": cur_key, "amount": current})
+    if goal:
+        for n in range(1, goal["passed"] + 1):
+            kind = "goal" if n == len(goal["stages"]) else "stage"
+            wins.append({"key": f"{kind}-{cur_key}-{n}", "kind": kind, "month": cur_key, "amount": goal["stages"][n - 1]})
+
+    # Связь с лестницей: сколько месяцев подушки добавил этот месяц и сколько таких месяцев до ступени.
+    month_net = current - m["biz_month"]["expenses"] - m["living_mtd"]
+    step = next((s for s in m["ladder"] if not s["done"]), None)
+    avg_net = m["income"] - m["living"]
+    left = max(step["need"] - step["have"], Decimal(0)) if step and step["progress"] is not None and not step.get("monthly") else None
+    return {
+        "month": cur_key, "day": today.day, "daysInMonth": days_in_month(today.year, today.month),
+        "current": current, "prevMonth": prev_key, "prevSame": prev_same, "prevTotal": by_month.get(prev_key, Decimal(0)),
+        "delta": round((current - prev_same) / prev_same * 100) if prev_same > 0 else None,
+        "record": record, "isRecord": bool(record and current > record["amount"]),
+        "goal": goal, "lifetime": total, "milestones": milestones, "next": nxt,
+        "steps": [{"target": Decimal(x), "done": total >= x} for x in LIFETIME if x > 1],
+        "sources": sources[:8], "wins": wins,
+        "freedom": {"monthNet": month_net,
+                    "monthsAdded": month_net / m["living"] if m["living"] > 0 else None,
+                    "step": step["key"] if step else None,
+                    "monthsToStep": left / avg_net if left is not None and avg_net > 0 else None},
+    }
 
 # ---------- быстрый ввод ----------
 
@@ -456,6 +589,37 @@ def undo_entry(fin_id=None):
     return {"narration": removed.group(1) if removed else ""}
 
 
+# ---------- цель месяца ----------
+
+def goal_cmd(words, today):
+    """fin goal 500000 | fin goal 7000 usd | fin goal off → строки в params.bean (история целей сохраняется)."""
+    if not words:
+        raise FinError("goal-format", "Формат: fin goal 500000 или fin goal 7000 usd.")
+    entries = load_ok()
+    currencies = {e.currency for e in entries if isinstance(e, data.Commodity)}
+    if words[0].lower() in ("off", "выкл", "нет", "0"):
+        amount, cur = Decimal(0), BASE
+    else:
+        mo = AMOUNT_RE.match(words[0])
+        if not mo or mo.group(1):
+            raise FinError("goal-format", "Формат: fin goal 500000 или fin goal 7000 usd.")
+        amount = Decimal(mo.group(3).replace(",", ".")) * (1000 if mo.group(4) else 1)
+        cur = SYMBOLS.get(mo.group(2) or mo.group(5), BASE)
+        if len(words) > 1:
+            if words[1].upper() not in currencies:
+                raise FinError("goal-currency", f"Нет валюты {words[1]} в журнале.")
+            cur = words[1].upper()
+    params_file = LEDGER / "params.bean"
+    before = params_file.read_text(encoding="utf-8")
+    params_file.write_text(before + f'{today} custom "fin-param" "income-goal" {amount}\n'
+                           f'{today} custom "fin-param" "income-goal-currency" "{cur}"\n', encoding="utf-8")
+    _, errors = load()
+    if errors:
+        params_file.write_text(before, encoding="utf-8")
+        raise FinError("ledger", "Цель не записана:\n" + "\n".join(error_lines(errors)))
+    return {"amount": amount, "currency": cur}
+
+
 # ---------- действие недели ----------
 
 def iso_week(d):
@@ -546,6 +710,7 @@ def status(today):
         "bizMonth": m["biz_month"], "months": m["months"],
         "unprocessed": m["unprocessed"], "warnings": m["warnings"],
         "txCount": m["tx_count"], "docs": docs(),
+        "growth": growth(entries, today, Converter(entries), p, m),
         "week": week_read(today),
         "entry": {"businessTag": str(p.get("business-tag", "ип")),
                   "defaultAccount": str(p.get("default-account", "Assets:Liquid:Cash")),
@@ -673,6 +838,13 @@ def cmd_week(a):
     print("Действие недели не задано." if not w else f"{w['text']}: {w['done']} / {w['target']}")
 
 
+def cmd_goal(a):
+    g = goal_cmd(a.words, dt.date.today())
+    if a.json:
+        return emit({"ok": True, "goal": g})
+    print("Цель убрана." if g["amount"] == 0 else f"Цель месяца: {g['amount']} {g['currency']}")
+
+
 def cmd_prices(a):
     with urllib.request.urlopen("https://www.cbr.ru/scripts/XML_daily.asp", timeout=20) as r:
         root = ET.fromstring(r.read(2_000_000))
@@ -743,6 +915,8 @@ def main(argv=None):
     s = cmd("undo", cmd_undo, True)
     s.add_argument("id", nargs="?")
     s = cmd("week", cmd_week, True)
+    s.add_argument("words", nargs="*")
+    s = cmd("goal", cmd_goal, True)
     s.add_argument("words", nargs="*")
     cmd("prices", cmd_prices)
     s = cmd("review", cmd_review)

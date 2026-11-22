@@ -13,10 +13,12 @@ fs.cpSync(path.join(repo, "i18n"), path.join(shell, "plugin", "i18n"), {recursiv
 fs.cpSync(path.join(repo, "cli", "example"), ledger, {recursive: true})
 const empty = path.join(work, "empty")
 fs.cpSync(path.join(repo, "cli", "example"), empty, {recursive: true})
-fs.writeFileSync(path.join(empty, "ledger", "2026", "2026-11.bean"), "")
+for (const f of fs.readdirSync(path.join(empty, "ledger", "2026"))) fs.writeFileSync(path.join(empty, "ledger", "2026", f), "")
 fs.writeFileSync(path.join(empty, "README.md"), "# guide\n")
 
 const cases = [
+  {name: "growth", env: {VIEW: "growth"}},
+  {name: "ru-growth", env: {VIEW: "growth"}, settings: {language: "ru"}},
   {name: "freedom", env: {VIEW: "freedom"}},
   {name: "month", env: {VIEW: "month"}},
   {name: "business", env: {VIEW: "month", SCOPE: "business"}},
@@ -38,7 +40,8 @@ for (const c of cases) {
   const state = (text.match(/STATE (\{.*\})/) || [])[1]
   const problem = text.match(/.*(TypeError|ReferenceError|Unable to assign|is not a function|is not defined|Cannot assign|Type .* unavailable|module .* is not installed).*/)
   console.log(c.name.padEnd(9), state || "NO STATE", problem ? "\n  QML ERROR: " + problem[0] : "")
-  if (!state || problem || !fs.existsSync(out)) { failed = true; console.log(text.slice(-2500)) }
+  const expectOk = !c.settings || !c.settings.command
+  if (!state || problem || !fs.existsSync(out) || (expectOk && !JSON.parse(state).ok)) { failed = true; console.log(text.slice(-2500)) }
 }
 console.log(failed ? "render FAILED" : "render passed, images in " + outDir)
 process.exit(failed ? 1 : 0)

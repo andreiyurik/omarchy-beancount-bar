@@ -55,7 +55,4 @@ Column {
     }
   }
 
-  Ui.PanelSeparator { foreground: Commons.Color.popups.text }
-
-  WeekAction { width: parent.width; service: root.service; onCommandRequested: function(text) { root.commandRequested(text) } }
 }

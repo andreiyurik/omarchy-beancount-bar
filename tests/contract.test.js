@@ -56,5 +56,25 @@ fin("week", "--json", "--", "10", "предложений")
 fin("week", "--json", "--", "+2")
 assert.deepStrictEqual(M.readStatus(fin("status", "--json").out).week, {text: "предложений", target: 10, done: 2})
 
+// Growth: this month against October, the record, the goal from params.bean, lifetime milestones.
+let g = M.readStatus(fin("status", "--json").out).growth
+assert.strictEqual(g.current, 105000)
+assert.strictEqual(g.record.amount, 87000)
+assert.strictEqual(g.isRecord, true)
+assert.deepStrictEqual(g.goal.stages, [40000, 80000, 120000, 150000])
+assert.strictEqual(g.goal.passed, 2)
+assert.strictEqual(g.lifetime, 192000)
+assert.deepStrictEqual(g.next, {target: 300000, remaining: 108000})
+assert.ok(g.wins.some(w => w.key === "two-sources"))
+// The goal command writes params.bean, and an income moves the stage.
+assert.strictEqual(JSON.parse(fin("goal", "--json", "--", "200000").out).ok, true)
+fin("add", "--json", "--", "+20к клиент Гамма #ип")
+g = M.readStatus(fin("status", "--json").out).growth
+assert.strictEqual(g.goal.target, 200000)
+assert.strictEqual(g.current, 125000)
+assert.strictEqual(JSON.parse(fin("goal", "--json", "--", "много").out).error, "goal-format")
+fin("goal", "--json", "--", "off")
+assert.strictEqual(M.readStatus(fin("status", "--json").out).growth.goal, null)
+
 fs.rmSync(work, {recursive: true})
 console.log("contract tests passed")

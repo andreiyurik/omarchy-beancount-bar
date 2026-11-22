@@ -1,0 +1,10 @@
+; Пример: вымышленный октябрь — чтобы было с чем сравнивать.
+2026-10-03 * "Клиент Бета"
+  Assets:Business:Checking    40000 RUB
+  Income:Business:Revenue
+2026-10-15 * "Продажа приложения"
+  Assets:Business:Checking     2000 RUB
+  Income:Streams:App
+2026-10-24 * "Клиент Бета"
+  Assets:Business:Checking    45000 RUB
+  Income:Business:Revenue

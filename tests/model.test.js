@@ -76,4 +76,17 @@ assert.strictEqual(M.remaining({done: false, progress: 0.4, have: 40, need: 100}
 assert.strictEqual(M.remaining({done: true, progress: 1, have: 100, need: 100}), 0)
 assert.strictEqual(M.obsidianUrl("/x/00 Конституция.md"), "obsidian://open?path=%2Fx%2F00%20%D0%9A%D0%BE%D0%BD%D1%81%D1%82%D0%B8%D1%82%D1%83%D1%86%D0%B8%D1%8F.md")
 
+// Growth.
+const fmt = {k: "%1к", m: "%1М", decimal: ","}
+assert.strictEqual(M.growthBarText({current: 105000, goal: {progress: 0.7, reached: false}}, fmt), "105к · 70%")
+assert.strictEqual(M.growthBarText({current: 105000, goal: null, isRecord: true, delta: 150}, fmt), "105к ★")
+assert.strictEqual(M.growthBarText({current: 42000, goal: null, isRecord: false, delta: -12}, fmt), "42к ▼12%")
+assert.deepStrictEqual(M.freshWins(null, [{key: "a"}]), [])
+assert.deepStrictEqual(M.freshWins(["a"], [{key: "a"}, {key: "b"}]).map(w => w.key), ["b"])
+assert.deepStrictEqual(M.parseCommand("цель 7000 usd"), {ok: true, kind: "goal", args: ["7000", "usd"], amount: 7000, currency: "USD"})
+assert.strictEqual(M.parseCommand("цель 500к").amount, 500000)
+assert.strictEqual(M.parseCommand("цель выкл").off, true)
+assert.strictEqual(M.parseCommand("цель много").ok, false)
+assert.strictEqual(M.readGrowth({current: "5", wins: [{key: "x"}]}).wins[0].kind, "x")
+
 console.log("model tests passed")

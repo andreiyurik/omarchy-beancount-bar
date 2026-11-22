@@ -9,7 +9,7 @@ Column {
   id: root
   property var service: null
   readonly property var st: service ? service.status : null
-  readonly property var examples: ["spend", "inbox", "income", "category", "account", "currency", "week"]
+  readonly property var examples: ["spend", "income", "goal", "inbox", "category", "account", "currency", "week"]
   readonly property var keys: ["enter", "tab", "esc", "arrows", "middle"]
   readonly property var noteKeys: ["guide", "constitution", "ladder", "policy"]
   signal tryRequested(string text)

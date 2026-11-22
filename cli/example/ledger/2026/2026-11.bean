@@ -1,9 +1,9 @@
 ; Пример: вымышленные операции, чтобы панель было на чём показать.
-2026-11-01 open Assets:Liquid:Tbank RUB
+2026-09-01 open Assets:Liquid:Tbank RUB
   short: "карта"
-2026-11-01 open Assets:Crypto:Wallet
-2026-11-01 open Income:Streams:App
-2026-11-01 open Expenses:Streams:App
+2026-09-01 open Assets:Crypto:Wallet
+2026-09-01 open Income:Streams:App
+2026-09-01 open Expenses:Streams:App
 
 2026-11-02 * "Начальный остаток"
   Assets:Liquid:Tbank        300000 RUB

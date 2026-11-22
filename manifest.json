@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "andreiyurik.beancount-bar",
   "name": "Beancount Bar",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "author": "Andrei Yurik",
   "license": "MIT",
   "preview": "preview.png",
@@ -18,7 +18,7 @@
     "expenses",
     "fava"
   ],
-  "description": "A freedom ladder, runway and one-line expense entry for your own Beancount ledger, through a small local command. No network, no keys.",
+  "description": "Income growth as a race (monthly goal in stages, last month, record month, lifetime milestones), a freedom ladder and one-line entry for your own Beancount ledger. Local, no keys.",
   "kinds": [
     "service",
     "bar-widget"
@@ -37,7 +37,8 @@
       "favaUrl": "http://localhost:5000",
       "autoRefresh": true,
       "refreshMinutes": 10,
-      "language": "auto"
+      "language": "auto",
+      "barShows": "growth"
     },
     "schema": [
       {
@@ -51,6 +52,12 @@
         "type": "string",
         "label": "Fava address",
         "description": "Opened as a web app from the panel."
+      },
+      {
+        "key": "barShows",
+        "type": "string",
+        "label": "Bar shows",
+        "description": "growth: this month's income against the goal or last month. freedom: the step of the freedom ladder."
       },
       {
         "key": "autoRefresh",

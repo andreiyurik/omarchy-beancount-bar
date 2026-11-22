@@ -7,6 +7,7 @@ var SYMBOLS = {"₽": "RUB", "$": "USD", "€": "EUR"}
 var SIGNS = {RUB: "₽", USD: "$", EUR: "€", USDT: "USDT"}
 var DATE_WORDS = {"вчера": 1, "yesterday": 1, "позавчера": 2}
 var WEEK_WORDS = ["week", "неделя"]
+var GOAL_WORDS = ["goal", "цель"]
 var AMOUNT_RE = /^(\+?)([$€₽]?)(\d+(?:[.,]\d{1,2})?)([кkКK]?)([$€₽]?)$/
 var MAX_TEXT = 200
 var DOC_KEYS = ["guide", "constitution", "policy", "ladder"]
@@ -54,6 +55,7 @@ function readStatus(text) {
       return {key: str(w.key, 40), count: num(w.count), days: num(w.days), amount: num(w.amount), share: num(w.share), limit: num(w.limit),
               currencies: (w.currencies || []).slice(0, 10).map(function(c) { return str(c, 12) })}
     }),
+    growth: readGrowth(raw.growth),
     week: raw.week ? {text: str(raw.week.text), target: Math.max(1, num(raw.week.target)), done: Math.max(0, num(raw.week.done))} : null,
     entry: {
       businessTag: str(entry.businessTag, 20) || "ип",
@@ -63,6 +65,49 @@ function readStatus(text) {
       history: history
     }
   }
+}
+
+function readGrowth(g) {
+  if (!g || typeof g !== "object") return null
+  var goal = g.goal && typeof g.goal === "object" ? {
+    target: num(g.goal.target), amount: num(g.goal.amount), currency: str(g.goal.currency, 10),
+    stages: (g.goal.stages || []).slice(0, 12).map(num), passed: num(g.goal.passed), reached: g.goal.reached === true,
+    progress: Math.max(0, Math.min(1, num(g.goal.progress))), over: num(g.goal.over), pace: num(g.goal.pace),
+    stage: g.goal.stage ? {target: num(g.goal.stage.target), remaining: num(g.goal.stage.remaining)} : null
+  } : null
+  var f = g.freedom || {}
+  return {
+    month: str(g.month, 7), day: num(g.day), daysInMonth: num(g.daysInMonth) || 30, current: num(g.current),
+    prevMonth: str(g.prevMonth, 7), prevSame: num(g.prevSame), prevTotal: num(g.prevTotal),
+    delta: g.delta === null || g.delta === undefined ? null : num(g.delta),
+    record: g.record ? {month: str(g.record.month, 7), amount: num(g.record.amount)} : null, isRecord: g.isRecord === true,
+    goal: goal, lifetime: num(g.lifetime),
+    milestones: (g.milestones || []).slice(0, 20).map(function(m) { return {target: num(m.target), date: str(m.date, 10)} }),
+    next: g.next ? {target: num(g.next.target), remaining: num(g.next.remaining)} : null,
+    steps: (g.steps || []).slice(0, 20).map(function(s) { return {target: num(s.target), done: s.done === true} }),
+    sources: (g.sources || []).slice(0, 8).map(function(s) { return {name: str(s.name, 80), current: num(s.current), previous: num(s.previous)} }),
+    wins: (g.wins || []).slice(0, 200).map(function(w) {
+      return {key: str(w.key, 60), kind: str(w.kind || w.key, 30), amount: num(w.amount), month: str(w.month, 7), date: str(w.date, 10)}
+    }),
+    freedom: {monthNet: num(f.monthNet), monthsAdded: f.monthsAdded === null || f.monthsAdded === undefined ? null : num(f.monthsAdded),
+              step: str(f.step, 40), monthsToStep: f.monthsToStep === null || f.monthsToStep === undefined ? null : num(f.monthsToStep)}
+  }
+}
+
+// Wins that were not there before. The first look marks everything as seen, so nothing old is announced.
+function freshWins(seen, wins) {
+  if (!seen) return []
+  return wins.filter(function(w) { return seen.indexOf(w.key) < 0 })
+}
+
+// "105к · 70%" with a goal, "105к ▲150%" against last month, "105к ★" for a record month.
+function growthBarText(g, format) {
+  if (!g || (g.lifetime === 0 && g.current === 0 && !g.goal)) return "◎"
+  var money = g.current > 0 ? shortMoney(g.current, format) : "0"
+  if (g.goal) return money + " · " + (g.goal.reached ? "★" : Math.floor(g.goal.progress * 100) + "%")
+  if (g.isRecord) return money + " ★"
+  if (g.delta !== null) return money + " " + (g.delta >= 0 ? "▲" : "▼") + Math.abs(g.delta) + "%"
+  return money
 }
 
 function matchAccount(query, accounts, roots, prefer) {
@@ -140,7 +185,18 @@ function parseEntry(line, today, ctx) {
 // "week 10 offers" / "неделя +1" → arguments for `fin week`.
 function parseCommand(line) {
   var tokens = String(line).trim().split(/\s+/)
-  if (WEEK_WORDS.indexOf((tokens[0] || "").toLowerCase()) < 0) return null
+  var head = (tokens[0] || "").toLowerCase()
+  if (GOAL_WORDS.indexOf(head) >= 0) {
+    var g = tokens.slice(1)
+    if (!g.length) return {ok: false, error: "goal-format"}
+    if (["off", "выкл", "нет", "0"].indexOf(g[0].toLowerCase()) >= 0) return {ok: true, kind: "goal", args: ["off"], off: true}
+    var m = AMOUNT_RE.exec(g[0])
+    if (!m || m[1] || g.length > 2) return {ok: false, error: "goal-format"}
+    var amount = parseFloat(m[3].replace(",", ".")) * (m[4] ? 1000 : 1)
+    var cur = SYMBOLS[m[2] || m[5]] || (g[1] ? g[1].toUpperCase() : "RUB")
+    return {ok: true, kind: "goal", args: g, amount: amount, currency: cur}
+  }
+  if (WEEK_WORDS.indexOf(head) < 0) return null
   var args = tokens.slice(1)
   if (!args.length) return {ok: false, error: "week-format"}
   if (/^[+-]\d+$/.test(args[0]) || args[0] === "clear") return {ok: true, kind: "week", args: [args[0]]}
@@ -225,4 +281,5 @@ function barText(status) {
 
 if (typeof module !== "undefined") module.exports = {readStatus: readStatus, parseEntry: parseEntry, parseCommand: parseCommand, matchAccount: matchAccount,
   formatMoney: formatMoney, shortMoney: shortMoney, nextStep: nextStep, barText: barText, leaf: leaf, iso: iso,
-  remaining: remaining, obsidianUrl: obsidianUrl, pluralCategory: pluralCategory, lookup: lookup}
+  remaining: remaining, obsidianUrl: obsidianUrl, pluralCategory: pluralCategory, lookup: lookup,
+  readGrowth: readGrowth, freshWins: freshWins, growthBarText: growthBarText}
