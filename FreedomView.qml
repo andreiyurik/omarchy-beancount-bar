@@ -81,28 +81,52 @@ Column {
     }
   }
 
-  MilestoneLadder {
+  // Every step by name: done, the one being climbed, and what each later one asks for.
+  Column {
     width: parent.width
-    steps: root.st ? root.st.ladder : []
-    segment: root.step && root.step.progress !== null ? root.step.progress : 0
-  }
-  // Step numbers under the dots: same spacing as MilestoneLadder.
-  Item {
-    id: numbers
-    width: parent.width
-    height: Style.font.bodySmall + Style.space(4)
-    readonly property int count: root.st ? root.st.ladder.length : 0
-    readonly property real dot: Style.space(10)
+    spacing: Style.space(2)
+    visible: !!root.st
     Repeater {
-      model: numbers.count
-      Hint {
+      model: root.st ? root.st.ladder : []
+      Item {
+        id: stepRow
+        required property var modelData
         required property int index
-        x: (numbers.count > 1 ? index * (numbers.width - numbers.dot) / (numbers.count - 1) : 0) + numbers.dot / 2 - width / 2
-        width: Style.space(22)
-        horizontalAlignment: Text.AlignHCenter
-        color: index === root.next ? Commons.Color.popups.text : Util.alpha(Commons.Color.popups.text, 0.65)
-        font.bold: index === root.next
-        text: String(index)
+        readonly property bool current: index === root.next
+        readonly property bool done: modelData.done
+        width: parent.width
+        height: Math.max(stepName.implicitHeight, Style.space(22)) + (why.visible ? why.implicitHeight + Style.space(2) : 0)
+        Rectangle {
+          id: mark
+          x: 0; y: Style.space(6)
+          width: Style.space(10); height: width; radius: width / 2
+          color: stepRow.done ? Commons.Color.accent : "transparent"
+          border.width: stepRow.done ? 0 : stepRow.current ? Style.space(2) : 1
+          border.color: stepRow.current ? Commons.Color.accent : Util.alpha(Commons.Color.popups.text, 0.35)
+        }
+        Txt {
+          id: stepName
+          x: Style.space(20); y: Style.space(2)
+          width: parent.width - x - stepValue.implicitWidth - Style.space(8)
+          font.bold: stepRow.current
+          color: stepRow.current || stepRow.done ? Commons.Color.popups.text : Util.alpha(Commons.Color.popups.text, 0.7)
+          text: root.service ? stepRow.index + ". " + root.service.stepTitle(stepRow.modelData) : ""
+        }
+        Hint {
+          id: stepValue
+          anchors.right: parent.right; y: Style.space(3)
+          color: stepRow.current ? Commons.Color.accent : Util.alpha(Commons.Color.popups.text, 0.65)
+          text: !root.service ? "" : stepRow.done ? "✓" : root.service.stepTarget(stepRow.modelData)
+        }
+        Hint {
+          id: why
+          x: Style.space(20); anchors.top: stepName.bottom; anchors.topMargin: Style.space(2)
+          width: parent.width - x
+          wrapMode: Text.Wrap
+          visible: stepArea.containsMouse && !stepRow.current
+          text: root.service ? root.service.t("freedom.why." + stepRow.modelData.key) : ""
+        }
+        MouseArea { id: stepArea; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
       }
     }
   }

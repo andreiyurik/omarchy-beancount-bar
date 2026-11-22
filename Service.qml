@@ -38,10 +38,12 @@ Item {
   readonly property bool ownLanguage: languageSetting !== "auto" && languageSetting !== Commons.I18n.language
   readonly property string language: ownLanguage ? languageSetting : Commons.I18n.language
   Commons.Translations { id: catalog; directory: Qt.resolvedUrl("i18n") }
-  FileView { id: ownCatalog; path: root.ownLanguage ? Qt.resolvedUrl("i18n/" + root.languageSetting + ".json").toString().replace(/^file:\/\//, "") : ""; printErrors: false; blockLoading: true }
-  FileView { id: englishCatalog; path: root.ownLanguage ? Qt.resolvedUrl("i18n/en.json").toString().replace(/^file:\/\//, "") : ""; printErrors: false; blockLoading: true }
+  FileView { id: ownCatalog; path: root.ownLanguage ? root.localPath(Qt.resolvedUrl("i18n/" + root.languageSetting + ".json")) : ""; printErrors: false; blockLoading: true }
+  FileView { id: englishCatalog; path: root.ownLanguage ? root.localPath(Qt.resolvedUrl("i18n/en.json")) : ""; printErrors: false; blockLoading: true }
   readonly property var ownStrings: ownLanguage ? safeJson(ownCatalog.text()) : null
   readonly property var englishStrings: ownLanguage ? safeJson(englishCatalog.text()) : null
+  // The shell loads plugins through qs:// URLs; FileView wants a plain path.
+  function localPath(url) { return String(url).replace(/^(file|qs):\/\//, "") }
   function safeJson(text) { try { return JSON.parse(text || "{}") } catch (error) { return {} } }
   function t(key) { return ownLanguage ? Model.lookup(ownStrings, englishStrings, key, undefined, language) : catalog.t(key) }
   function tn(key, count) { return ownLanguage ? Model.lookup(ownStrings, englishStrings, key, count, language) : catalog.tn(key, count) }
@@ -66,7 +68,6 @@ Item {
     if (!step) return ""
     if (step.key === "reserve-min" || step.key === "reserve-target") return t("step." + step.key).arg(number(step.months, 0))
     if (step.key === "asset-share") return t("step.asset-share").arg(percent(step.share))
-    if (step.key === "freedom") return t("step.freedom").arg(money(step.capital))
     return t("step." + step.key)
   }
   function warningText(w) {
@@ -235,6 +236,12 @@ Item {
   }
   function openNote(key) { var p = docPath(key); if (p) Quickshell.execDetached(["xdg-open", Model.obsidianUrl(p)]) }
   function openUrl(url) { Quickshell.execDetached(["xdg-open", url]) }
+  // What a later step asks for, short: "1,1 М ₽" or "45к ₽/мес.".
+  function stepTarget(step) {
+    if (!step || step.progress === null || step.need <= 0) return step && step.key === "no-debt" ? "" : "—"
+    var amount = amountsHidden ? "•••" : Model.shortMoney(step.need, {k: t("short.k"), m: t("short.m"), decimal: locale.decimalPoint}) + " ₽"
+    return step.monthly ? t("freedom.per-month").arg(amount) : amount
+  }
   function remainingText(step) {
     var left = Model.remaining(step)
     if (left <= 0) return ""

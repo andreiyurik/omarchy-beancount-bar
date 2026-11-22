@@ -48,7 +48,7 @@
   "step.reserve-target": "Reserve of %1 months: runway for your own project",
   "step.asset-share": "Assets pay %1 of spending",
   "step.asset-fixed": "Assets pay the fixed costs",
-  "step.freedom": "Freedom capital %1",
+  "step.freedom": "Freedom capital",
   "freedom.step": "Step %1: %2",
   "freedom.all-done": "Every step is done",
   "freedom.why.no-debt": "Stop paying interest to others first.",
@@ -141,5 +141,6 @@
   "start.title": "Start with today’s balances",
   "start.body": "Open your accounts in the ledger and add what each one holds today, from the bank statements. History is not needed. Then the ladder and runway appear here.",
   "freedom.left": "%1 to go",
-  "freedom.left-monthly": "%1 a month to go"
+  "freedom.left-monthly": "%1 a month to go",
+  "freedom.per-month": "%1/mo"
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Every step of the ladder is listed by name, with what it asks for; hover a later step to see what it gives.
+- The language setting also works when the shell loads plugins through qs:// URLs.
+
 ## 0.2.0
 
 - Help inside the panel (? button or F1): the entry line with clickable examples, the keys, and buttons to your notes in Obsidian, Fava and this guide.
