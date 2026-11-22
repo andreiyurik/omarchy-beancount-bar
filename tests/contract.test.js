@@ -1,0 +1,60 @@
+// Run with: node tests/contract.test.js   (needs uv; downloads beancount once)
+// The panel previews entries in JavaScript, fin.py writes them. Both must read a line the same way.
+const assert = require("assert"), fs = require("fs"), os = require("os"), path = require("path"), {execFileSync} = require("child_process")
+const M = require("./load-model")
+
+const repo = path.join(__dirname, "..")
+const work = fs.mkdtempSync(path.join(os.tmpdir(), "beancount-bar-contract-"))
+fs.cpSync(path.join(repo, "cli", "example"), work, {recursive: true})
+const env = {...process.env, FIN_ROOT: work}
+const fin = (...args) => {
+  try { return {code: 0, out: execFileSync(path.join(repo, "cli", "fin"), args, {env, encoding: "utf8"})} }
+  catch (error) { return {code: error.status, out: error.stdout} }
+}
+
+const status = M.readStatus(fin("status", "--json").out)
+assert.strictEqual(status.ok, true, "status")
+assert.strictEqual(status.liquid, 244700)
+assert.strictEqual(status.tax.reserved, 3000)
+assert.strictEqual(status.ladder.length, 6)
+assert.ok(status.warnings.some(w => w.key === "tax-gap"))
+assert.ok(status.entry.accounts.some(a => a.short === "карта"))
+
+const lines = ["450 кофе", "1,5к что-то новое вчера", "+12к клиент #ип", "2000 хостинг #ип >Tools", "12 usd хостинг", "$12 хостинг",
+  "450 кофе @нал", "450 кофе @карта", "кофе 450", "450", "12x кофе", "450 кофе @нетакого", "2000 хостинг >Tools", '450 "кофе"', "100 такси позавчера"]
+const py = `
+import json, sys, datetime as dt
+sys.path.insert(0, ${JSON.stringify(path.join(repo, "cli"))})
+import fin
+entries = fin.load_ok(); p = fin.params(entries, dt.date(2026, 11, 22))
+cur = {e.currency for e in entries if type(e).__name__ == "Commodity"}
+out = []
+for line in json.loads(sys.argv[1]):
+    try:
+        e = fin.parse_entry(line, dt.date(2026, 11, 22), fin.open_accounts(entries), fin.history(entries), p, cur)
+        out.append({"ok": True, **{k: (float(v) if k == "amount" else v) for k, v in e.items()}})
+    except fin.FinError as err:
+        out.append({"ok": False, "error": err.key})
+print(json.dumps(out, ensure_ascii=False))`
+const pyOut = JSON.parse(execFileSync("uv", ["run", "--quiet", "--no-project", "--with", "beancount==3.2.3", "python", "-c", py, JSON.stringify(lines)], {env, encoding: "utf8"}))
+const keys = ["ok", "error", "date", "flag", "narration", "amount", "currency", "account", "source", "income", "business"]
+lines.forEach((line, i) => {
+  const js = M.parseEntry(line, new Date(2026, 10, 22), status.entry), pyE = pyOut[i]
+  for (const k of keys) if (k in pyE || (k in js && js.ok)) assert.deepStrictEqual(js[k], pyE[k], `${line}: ${k} js=${js[k]} py=${pyE[k]}`)
+})
+
+// Write, undo and the week through the real command.
+let r = JSON.parse(fin("add", "--json", "--", "450 кофе").out)
+assert.strictEqual(r.ok, true)
+assert.strictEqual(M.readStatus(fin("status", "--json").out).liquid, 244250)
+assert.strictEqual(JSON.parse(fin("undo", "--json", r.entry.id).out).narration, "кофе")
+assert.strictEqual(M.readStatus(fin("status", "--json").out).liquid, 244700)
+r = fin("add", "--json", "--", "$20 хостинг #ип")          // a rouble account refuses dollars
+assert.strictEqual(r.code, 1)
+assert.strictEqual(JSON.parse(r.out).error, "ledger")
+fin("week", "--json", "--", "10", "предложений")
+fin("week", "--json", "--", "+2")
+assert.deepStrictEqual(M.readStatus(fin("status", "--json").out).week, {text: "предложений", target: 10, done: 2})
+
+fs.rmSync(work, {recursive: true})
+console.log("contract tests passed")

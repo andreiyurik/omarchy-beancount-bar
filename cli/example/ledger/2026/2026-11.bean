@@ -1,0 +1,31 @@
+; Пример: вымышленные операции, чтобы панель было на чём показать.
+2026-11-01 open Assets:Liquid:Tbank RUB
+  short: "карта"
+2026-11-01 open Assets:Crypto:Wallet
+2026-11-01 open Income:Streams:App
+2026-11-01 open Expenses:Streams:App
+
+2026-11-02 * "Начальный остаток"
+  Assets:Liquid:Tbank        300000 RUB
+  Equity:Opening-Balances
+2026-11-02 * "Начальный остаток крипта"
+  Assets:Crypto:Wallet         2000 USDT
+  Equity:Opening-Balances
+2026-11-05 * "Клиент Альфа"
+  Assets:Business:Checking   100000 RUB
+  Income:Business:Revenue
+2026-11-06 * "Аренда"
+  Expenses:Fixed:Housing      60000 RUB
+  Assets:Liquid:Tbank
+2026-11-07 * "кофе"
+  Expenses:Life:EatingOut       300 RUB
+  Assets:Liquid:Tbank
+2026-11-08 * "Продажа приложения"
+  Assets:Liquid:Tbank          5000 RUB
+  Income:Streams:App
+2026-11-09 * "Хостинг"
+  Expenses:Business:Tools      1500 RUB
+  Assets:Business:Checking
+2026-11-10 * "В налоговую копилку"
+  Assets:Reserved:Tax          3000 RUB
+  Assets:Business:Checking

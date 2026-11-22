@@ -1,0 +1,85 @@
+; План счетов. Логика: "Финансы/02 Лестница свободы.md".
+; Имена счетов — латиницей (так надёжнее для инструментов), описания — по-русски.
+; Новый банк/карта: Assets:Liquid:<Bank>:<Card>, например Assets:Liquid:Tbank:Black.
+
+2026-11-01 commodity RUB
+2026-11-01 commodity USD
+2026-11-01 commodity EUR
+2026-11-01 commodity USDT
+
+; ---------- Активы ----------
+; Liquid — подушка и текущие деньги. Отсюда считается runway.
+2026-11-01 open Assets:Liquid:Cash            RUB
+  short: "нал"
+; 2026-11-01 open Assets:Liquid:<Bank>:<Card>  RUB
+; 2026-11-01 open Assets:Liquid:<Bank>:Savings RUB
+
+; Invest — то, что приносит доход (вклады на срок, брокерский счёт).
+; Метка cashflow: TRUE — актив платит деньги (проценты, дивиденды, аренда).
+; 2026-11-01 open Assets:Invest:<Broker>
+;   cashflow: TRUE
+
+; Crypto — спекулятивная часть, лимит в params.bean.
+; 2026-11-01 open Assets:Crypto:<Wallet>
+
+; Business — деньги ИП (расчётный счёт). Официальная бухгалтерия — в банке/у бухгалтера,
+; здесь — управленческий учёт. В runway и капитал свободы не входит.
+2026-11-01 open Assets:Business:Checking      RUB
+  short: "ип"
+; Reserved — копилка под налог ИП (правило 3). Не тратится, в runway не входит.
+2026-11-01 open Assets:Reserved:Tax           RUB
+  short: "налог"
+
+; ---------- Обязательства ----------
+; Debt — долги под проценты. Ступень 0 лестницы: здесь должен быть ноль.
+; 2026-11-01 open Liabilities:Debt:<Name>      RUB
+; 2026-11-01 open Liabilities:CreditCard:<Bank> RUB
+
+; ---------- Доходы ----------
+2026-11-01 open Income:Active:Salary
+2026-11-01 open Income:Active:Freelance
+; Business — выручка ИП (клиенты). Продукты — в Streams.
+2026-11-01 open Income:Business:Revenue
+2026-11-01 open Income:Uncategorized
+; Passive — доход от активов: проценты, дивиденды, аренда.
+2026-11-01 open Income:Passive:Interest
+2026-11-01 open Income:Passive:Dividends
+; Streams — ручейки: свои продукты (приложения, SaaS). Один подсчёт на продукт:
+; 2026-11-01 open Income:Streams:<Product>
+; 2026-11-01 open Expenses:Streams:<Product>
+
+; ---------- Расходы ----------
+; Fixed — обязательные. Ступень 4: пассивный доход их покрывает.
+2026-11-01 open Expenses:Fixed:Housing
+2026-11-01 open Expenses:Fixed:Utilities
+2026-11-01 open Expenses:Fixed:Communication
+2026-11-01 open Expenses:Fixed:Transport
+2026-11-01 open Expenses:Fixed:Insurance
+2026-11-01 open Expenses:Fixed:Subscriptions
+; Life — переменные.
+2026-11-01 open Expenses:Life:Groceries
+2026-11-01 open Expenses:Life:EatingOut
+2026-11-01 open Expenses:Life:Health
+2026-11-01 open Expenses:Life:Clothes
+2026-11-01 open Expenses:Life:Leisure
+2026-11-01 open Expenses:Life:Travel
+2026-11-01 open Expenses:Life:Gifts
+2026-11-01 open Expenses:Life:Other
+; Growth — вложения в себя: в описании операции пишите, ради какого дохода.
+2026-11-01 open Expenses:Growth:Education
+2026-11-01 open Expenses:Growth:Tools
+2026-11-01 open Expenses:Growth:Sport
+2026-11-01 open Expenses:Taxes
+; Business — расходы ИП. Не расходы на жизнь: вычитаются из дохода.
+2026-11-01 open Expenses:Business:Services
+2026-11-01 open Expenses:Business:Tools
+2026-11-01 open Expenses:Business:Ads
+2026-11-01 open Expenses:Business:Fees
+2026-11-01 open Expenses:Business:Taxes       ; налог и взносы ИП
+2026-11-01 open Expenses:Business:Other
+2026-11-01 open Expenses:Fees
+; Сюда падает быстрый ввод без известной категории — разбирается на еженедельной сверке.
+2026-11-01 open Expenses:Uncategorized
+
+; ---------- Капитал ----------
+2026-11-01 open Equity:Opening-Balances

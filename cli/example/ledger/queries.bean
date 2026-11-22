@@ -1,0 +1,20 @@
+; Сохранённые запросы — видны во Fava на вкладке Query.
+2026-11-22 query "Расходы по месяцам" "
+  SELECT year, month, root(account, 2) AS category, convert(sum(position), 'RUB') AS rub
+  WHERE account ~ '^Expenses:'
+  GROUP BY year, month, category ORDER BY year DESC, month DESC, category"
+
+2026-11-22 query "Доход от активов по месяцам" "
+  SELECT year, month, root(account, 3) AS source, convert(sum(position), 'RUB') AS rub
+  WHERE account ~ '^Income:(Passive|Streams):'
+  GROUP BY year, month, source ORDER BY year DESC, month DESC"
+
+2026-11-22 query "Ручейки: прибыль по продуктам" "
+  SELECT leaf(account) AS product, convert(sum(position), 'RUB') AS rub
+  WHERE account ~ '^(Income|Expenses):Streams:'
+  GROUP BY product ORDER BY product"
+
+2026-11-22 query "Не разобрано" "
+  SELECT date, narration, account, position
+  WHERE account ~ '^Expenses:' AND (account = 'Expenses:Uncategorized' OR flag = '!')
+  ORDER BY date"

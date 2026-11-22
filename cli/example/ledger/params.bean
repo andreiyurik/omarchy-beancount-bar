@@ -1,0 +1,13 @@
+; Цифры конституции как данные. fin report и fin check читают их отсюда.
+; Чтобы поменять правило — добавьте новую строку с новой датой (история сохраняется).
+2026-11-22 custom "fin-param" "pay-yourself-first"     0.20  ; доля дохода сразу в Assets:Invest
+2026-11-22 custom "fin-param" "reserve-months-min"     6     ; ступень 1
+2026-11-22 custom "fin-param" "reserve-months-target"  12    ; ступень 2
+2026-11-22 custom "fin-param" "streams-share-step3"    0.25  ; ступень 3: доход от активов / расходы
+2026-11-22 custom "fin-param" "crypto-max-share"       0.15  ; доля крипты в net worth
+2026-11-22 custom "fin-param" "withdrawal-rate"        0.035 ; ступень 5: капитал = расходы за год / ставка
+2026-11-22 custom "fin-param" "purchase-pause"         30000 ; ₽, дороже — только через 48 часов
+2026-11-22 custom "fin-param" "tax-rate"               0.06  ; УСН «Доходы» 6% — уточнить режим; взносы уменьшают налог, здесь не учтены
+2026-11-22 custom "fin-param" "business-tag"           "ип"  ; #ип в быстром вводе — операция ИП
+2026-11-22 custom "fin-param" "default-account"          Assets:Liquid:Cash
+2026-11-22 custom "fin-param" "default-business-account" Assets:Business:Checking

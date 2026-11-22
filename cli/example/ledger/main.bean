@@ -1,0 +1,12 @@
+; Главный файл журнала. Только настройки и подключение остальных файлов.
+option "title" "Личные финансы"
+option "operating_currency" "RUB"
+option "operating_currency" "USD"
+
+include "accounts.bean"
+include "params.bean"
+include "budgets.bean"
+include "queries.bean"
+include "prices.bean"
+include "inbox.bean"
+include "2026/*.bean"

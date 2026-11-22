@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# Reference `fin` for Beancount Bar. Needs uv (https://docs.astral.sh/uv/).
+# FIN_ROOT points at a folder with ledger/main.bean (default: ~/finance).
+HERE="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+export FIN_ROOT="${FIN_ROOT:-$HOME/finance}"
+exec uv run --quiet --no-project --with "beancount==3.2.3" python "$HERE/fin.py" "$@"

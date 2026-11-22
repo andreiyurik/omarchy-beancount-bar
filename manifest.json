@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "id": "andreiyurik.beancount-bar",
+  "name": "Beancount Bar",
+  "version": "0.1.0",
+  "author": "Andrei Yurik",
+  "license": "MIT",
+  "preview": "preview.png",
+  "homepage": "https://github.com/andreiyurik/omarchy-beancount-bar",
+  "repository": "https://github.com/andreiyurik/omarchy-beancount-bar",
+  "keywords": [
+    "finance",
+    "beancount",
+    "plain text accounting",
+    "net worth",
+    "runway",
+    "budget",
+    "expenses",
+    "fava"
+  ],
+  "description": "A freedom ladder, runway and one-line expense entry for your own Beancount ledger, through a small local command. No network, no keys.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Beancount Bar",
+    "category": "Finance",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "command": "fin",
+      "favaUrl": "http://localhost:5000",
+      "autoRefresh": true,
+      "refreshMinutes": 10
+    },
+    "schema": [
+      {
+        "key": "command",
+        "type": "string",
+        "label": "fin command",
+        "description": "The command that answers `status --json`, `add`, `undo` and `week`. A full path works too."
+      },
+      {
+        "key": "favaUrl",
+        "type": "string",
+        "label": "Fava address",
+        "description": "Opened as a web app from the panel."
+      },
+      {
+        "key": "autoRefresh",
+        "type": "boolean",
+        "label": "Refresh in the background"
+      },
+      {
+        "key": "refreshMinutes",
+        "type": "integer",
+        "label": "Refresh interval (minutes)",
+        "min": 1,
+        "max": 120
+      }
+    ]
+  }
+}
