@@ -152,7 +152,10 @@ Item {
     property bool exitedOnce: false
     stdout: StdioCollector { id: readerOut }
     stderr: StdioCollector { id: readerErr }
-    onExited: function(code) { exitedOnce = true; root.busy = false; root.finishRefresh(code, readerOut.text, readerErr.text) }
+    onExited: function(code) {
+      exitedOnce = true; root.busy = false; root.finishRefresh(code, readerOut.text, readerErr.text)
+      if (root.refreshQueued) Qt.callLater(root.refresh)
+    }
     // A command that can't start never exits: say so instead of waiting forever.
     onRunningChanged: if (!running && root.busy) Qt.callLater(function() {
       if (!reader.exitedOnce && root.busy) { root.busy = false; root.problem = {key: "not-found", message: ""} }
@@ -208,8 +211,12 @@ Item {
   Component.onCompleted: refresh()
   onCommandChanged: refresh()
 
+  // A refresh asked for while one runs (e.g. right after an entry) may see the ledger from before
+  // the write, so it runs again once the current one ends instead of being dropped.
+  property bool refreshQueued: false
   function refresh() {
-    if (reader.running) return
+    if (reader.running) { refreshQueued = true; return }
+    refreshQueued = false
     busy = true
     reader.exitedOnce = false
     reader.command = [command, "status", "--json"]
@@ -259,10 +266,11 @@ Item {
     if (preview.kind === "goal") { runCommand(["goal"], preview.args, done); return }
     write(["add", "--json", "--", String(text).trim()], function(ok, out) {
       var r = parse(out)
-      if (!ok || !r || !r.entry) { done(false, r && r.message ? String(r.message).split("\n")[0] : t("entry.failed")); return }
+      if (!ok || !r || !r.entry) { done(false, finMessage(r)); return }
       lastAdded = {id: String(r.entry.id), narration: String(r.entry.narration).slice(0, 200)}
       var e = r.entry
-      notifyEntry(t("notice.saved"), (e.income ? "+" : "−") + plainMoney(e.amount, e.currency) + " · " + lastAdded.narration + " · " + Model.leaf(e.account))
+      // money(), not plainMoney(): the desktop notification must respect "hide amounts" too.
+      notifyEntry(t("notice.saved"), (e.income ? "+" : "−") + money(e.amount, e.currency) + " · " + lastAdded.narration + " · " + Model.leaf(e.account))
       done(true, "")
       refresh()
     })
@@ -279,12 +287,13 @@ Item {
   function runCommand(name, args, done) {
     write(name.concat(["--json", "--"]).concat(args), function(ok, out) {
       var r = parse(out)
-      if (done) done(ok, ok ? "" : (r && r.message ? String(r.message).split("\n")[0] : t("entry.failed")))
+      if (done) done(ok, ok ? "" : finMessage(r))
       if (ok) refresh()
     })
   }
   function bumpWeek(delta) { runWeek([delta > 0 ? "+" + delta : String(delta)], null) }
 
+  function finMessage(r) { return Model.finErrorText(r, t) }
   function parse(text) { try { return JSON.parse(String(text).slice(0, 100000)) } catch (error) { return null } }
 
   function toggleAmounts() {

@@ -38,6 +38,7 @@ assert.strictEqual(p("12x проездной").error, "bad-amount")
 assert.strictEqual(p("2900 проездной @нетакого").error, "unknown-account")
 // Quotes can't break out of the Beancount string.
 assert.strictEqual(p('450 "проездной"').narration, "'проездной'")
+assert.strictEqual(p("450 a\\b\\").narration, "a/b/")
 
 // Week commands.
 assert.deepStrictEqual(M.parseCommand("неделя 10 предложений клиентам"), {ok: true, kind: "week", args: ["10", "предложений", "клиентам"], target: 10, text: "предложений клиентам"})
@@ -64,6 +65,7 @@ assert.strictEqual(M.barText({ok: true, unprocessed: 0, ladder: [{done: true}]})
 assert.strictEqual(M.formatMoney(1234567, "RUB"), "1 234 567 ₽")
 assert.strictEqual(M.formatMoney(-12.5, "USD"), "−$12.50")
 assert.strictEqual(M.shortMoney(81500, {k: "%1к", m: "%1М", decimal: ","}), "82к")
+assert.strictEqual(M.shortMoney(999600, {k: "%1k", m: "%1M", decimal: "."}), "1M")
 assert.strictEqual(M.leaf("Expenses:Life:EatingOut"), "Life:EatingOut")
 
 // Plurals and lookup for a language other than the shell's.
@@ -93,5 +95,12 @@ assert.strictEqual(M.readGrowth({current: "5", wins: [{key: "x"}]}).wins[0].kind
 assert.deepStrictEqual([0, 99999, 100000, 999999, 1e6, 1e7, 5e7].map(x => M.wealthLevel(x).key), ["sprout", "sprout", "coins", "coins", "gold", "diamond", "diamond"])
 assert.deepStrictEqual(M.wealthLevel(192000).next, {key: "gold", from: 1000000})
 assert.strictEqual(M.wealthLevel(2e7).next, null)
+
+// fin errors are shown in the panel's language, by code.
+const en = require("../i18n/en.json"), tr = key => en[key] || key
+assert.strictEqual(M.finErrorText({error: "unknown-account", query: "bank", message: "Нет счёта «bank»."}, tr), "No account matches “bank”")
+assert.strictEqual(M.finErrorText({error: "ledger", messages: ["inbox.bean:5: syntax error"], message: "Не записано:\n…"}, tr), "Not saved: the ledger would break (inbox.bean:5: syntax error)")
+assert.strictEqual(M.finErrorText({error: "brand-new-code", message: "first\nsecond"}, tr), "first")
+assert.strictEqual(M.finErrorText(null, tr), en["entry.failed"])
 
 console.log("model tests passed")

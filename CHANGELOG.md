@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Hiding amounts also hides them in the notification after an entry.
+- Errors from `fin` are shown in the panel's language; a ledger error names the first Beancount problem.
+- After an entry the panel always refreshes, even if a background refresh was running.
+- A backslash in a description no longer makes the entry fail.
+- `fin` writes ledger files in one step and keeps their permissions; `fin prices` is checked by Beancount; unexpected errors still answer in JSON; `fin review` refuses a month that does not exist.
+- `FIN_TODAY=YYYY-MM-DD` runs `fin` as of that day; the contract test uses it, so it no longer fails when the calendar month changes.
+
 ## 0.3.1
 
 - The bar starts with an icon that grows with everything you have earned and never goes back: a sprout, then coins at 100 000, gold at 1 000 000, a diamond at 10 000 000. The tooltip names the level and the next one; reaching a new level says so in the win notification.

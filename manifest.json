@@ -45,7 +45,7 @@
         "key": "command",
         "type": "string",
         "label": "fin command",
-        "description": "The command that answers `status --json`, `add`, `undo` and `week`. A full path works too."
+        "description": "The command that answers `status --json`, `add`, `undo`, `week` and `goal`. A full path works too."
       },
       {
         "key": "favaUrl",

@@ -6,7 +6,8 @@ const M = require("./load-model")
 const repo = path.join(__dirname, "..")
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "beancount-bar-contract-"))
 fs.cpSync(path.join(repo, "cli", "example"), work, {recursive: true})
-const env = {...process.env, FIN_ROOT: work}
+// The example ledger is November 2026: pin the date so growth numbers do not drift with the calendar.
+const env = {...process.env, FIN_ROOT: work, FIN_TODAY: "2026-11-22"}
 const fin = (...args) => {
   try { return {code: 0, out: execFileSync(path.join(repo, "cli", "fin"), args, {env, encoding: "utf8"})} }
   catch (error) { return {code: error.status, out: error.stdout} }
@@ -21,7 +22,7 @@ assert.ok(status.warnings.some(w => w.key === "tax-gap"))
 assert.ok(status.entry.accounts.some(a => a.short === "карта"))
 
 const lines = ["2900 проездной", "1,5к что-то новое вчера", "+12к клиент #ип", "2000 хостинг #ип >Tools", "12 usd хостинг", "$12 хостинг",
-  "2900 проездной @нал", "2900 проездной @карта", "проездной 2900", "2900", "12x проездной", "2900 проездной @нетакого", "2000 хостинг >Tools", '450 "проездной"', "100 такси позавчера"]
+  "2900 проездной @нал", "2900 проездной @карта", "проездной 2900", "2900", "12x проездной", "2900 проездной @нетакого", "2000 хостинг >Tools", '450 "проездной"', "100 такси позавчера", "450 a\\b\\", "٢٩٠٠ проездной"]
 const py = `
 import json, sys, datetime as dt
 sys.path.insert(0, ${JSON.stringify(path.join(repo, "cli"))})
@@ -48,6 +49,10 @@ let r = JSON.parse(fin("add", "--json", "--", "2900 проездной").out)
 assert.strictEqual(r.ok, true)
 assert.strictEqual(M.readStatus(fin("status", "--json").out).liquid, 239100)
 assert.strictEqual(JSON.parse(fin("undo", "--json", r.entry.id).out).narration, "проездной")
+r = JSON.parse(fin("add", "--json", "--", "450 a\\b\\").out)  // a trailing backslash used to break the ledger
+assert.strictEqual(r.ok, true)
+assert.strictEqual(r.entry.narration, "a/b/")
+fin("undo", "--json", r.entry.id)
 assert.strictEqual(M.readStatus(fin("status", "--json").out).liquid, 242000)
 r = fin("add", "--json", "--", "$20 хостинг #ип")          // a rouble account refuses dollars
 assert.strictEqual(r.code, 1)
@@ -75,6 +80,21 @@ assert.strictEqual(g.current, 125000)
 assert.strictEqual(JSON.parse(fin("goal", "--json", "--", "много").out).error, "goal-format")
 fin("goal", "--json", "--", "off")
 assert.strictEqual(M.readStatus(fin("status", "--json").out).growth.goal, null)
+
+// Writes keep the ledger file's permissions.
+fs.chmodSync(path.join(work, "ledger", "inbox.bean"), 0o600)
+r = JSON.parse(fin("add", "--json", "--", "100 такси").out)
+assert.strictEqual(fs.statSync(path.join(work, "ledger", "inbox.bean")).mode & 0o777, 0o600)
+fin("undo", "--json", r.entry.id)
+// A month that does not exist is refused, not turned into a note.
+assert.strictEqual(fin("review", "2026-13").code, 1)
+assert.ok(!fs.existsSync(path.join(work, "20 Обзоры", "2026-13.md")))
+// An unexpected error still answers in JSON, so the panel can show it.
+fs.renameSync(path.join(work, "ledger", "inbox.bean"), path.join(work, "inbox.bean.away"))
+r = fin("undo", "--json")
+assert.strictEqual(r.code, 1)
+assert.strictEqual(JSON.parse(r.out).error, "internal")
+fs.renameSync(path.join(work, "inbox.bean.away"), path.join(work, "ledger", "inbox.bean"))
 
 fs.rmSync(work, {recursive: true})
 console.log("contract tests passed")

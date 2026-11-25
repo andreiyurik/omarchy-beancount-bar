@@ -165,7 +165,8 @@ function parseEntry(line, today, ctx) {
     else if (DATE_WORDS[low] !== undefined) offset = DATE_WORDS[low]
     else words.push(tok)
   })
-  var narration = words.join(" ").replace(/"/g, "'").trim()
+  // Same as fin.py: quotes and backslashes can't break out of the Beancount string.
+  var narration = words.join(" ").replace(/"/g, "'").replace(/\\/g, "/").trim()
   if (!narration) return {ok: false, error: "name-missing", amount: tokens[0]}
 
   var accounts = ctx.accounts || []
@@ -216,6 +217,19 @@ function parseCommand(line) {
   return {ok: true, kind: "week", args: args, target: num(args[0]), text: args.slice(1).join(" ")}
 }
 
+// The text for a failed fin call. fin's own message is in Russian, so the error code is translated
+// with t (the panel's lookup) instead; unknown codes fall back to the message's first line,
+// so a newer fin with new codes still says something.
+function finErrorText(r, t) {
+  if (!r) return t("entry.failed")
+  var key = "entry." + str(r.error, 40), text = r.error ? String(t(key) || "") : ""
+  if (text && text !== key) {
+    if (r.error === "ledger") return text.replace("%1", Array.isArray(r.messages) && r.messages.length ? str(r.messages[0], 300) : "…")
+    return text.replace("%1", str(r.amount || r.query || r.currency, 60))
+  }
+  return r.message ? str(r.message, 2000).split("\n")[0] : t("entry.failed")
+}
+
 function pad(n) { return n < 10 ? "0" + n : String(n) }
 function iso(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) }
 
@@ -237,7 +251,8 @@ function shortMoney(value, format) {
   var f = format || {k: "%1k", m: "%1M", decimal: "."}
   var n = Math.abs(num(value)), sign = num(value) < 0 ? "−" : ""
   var text = function(x) { return String(x).replace(".", f.decimal) }
-  if (n >= 1e6) return sign + f.m.replace("%1", text(Math.round(n / 1e5) / 10))
+  // 999 500 and up would round to "1000k"; it reads as "1M".
+  if (n >= 999500) return sign + f.m.replace("%1", text(Math.round(n / 1e5) / 10))
   if (n >= 1e4) return sign + f.k.replace("%1", text(Math.round(n / 1e3)))
   if (n >= 1e3) return sign + f.k.replace("%1", text(Math.round(n / 100) / 10))
   return sign + text(Math.round(n))
@@ -294,4 +309,4 @@ function barText(status) {
 if (typeof module !== "undefined") module.exports = {readStatus: readStatus, parseEntry: parseEntry, parseCommand: parseCommand, matchAccount: matchAccount,
   formatMoney: formatMoney, shortMoney: shortMoney, nextStep: nextStep, barText: barText, leaf: leaf, iso: iso,
   remaining: remaining, obsidianUrl: obsidianUrl, pluralCategory: pluralCategory, lookup: lookup,
-  readGrowth: readGrowth, freshWins: freshWins, growthBarText: growthBarText, wealthLevel: wealthLevel}
+  readGrowth: readGrowth, freshWins: freshWins, growthBarText: growthBarText, wealthLevel: wealthLevel, finErrorText: finErrorText}
