@@ -262,7 +262,8 @@ Item {
       if (!ok || !r || !r.entry) { done(false, r && r.message ? String(r.message).split("\n")[0] : t("entry.failed")); return }
       lastAdded = {id: String(r.entry.id), narration: String(r.entry.narration).slice(0, 200)}
       var e = r.entry
-      notifyEntry(t("notice.saved"), (e.income ? "+" : "−") + plainMoney(e.amount, e.currency) + " · " + lastAdded.narration + " · " + Model.leaf(e.account))
+      // money(), not plainMoney(): the desktop notification must respect "hide amounts" too.
+      notifyEntry(t("notice.saved"), (e.income ? "+" : "−") + money(e.amount, e.currency) + " · " + lastAdded.narration + " · " + Model.leaf(e.account))
       done(true, "")
       refresh()
     })
