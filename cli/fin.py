@@ -428,6 +428,17 @@ def growth(entries, today, conv, p, m):
                     "monthsToStep": left / avg_net if left is not None and avg_net > 0 else None},
     }
 
+def write_atomic(path, text):
+    """Replace a ledger file in one step: a crash mid-write leaves the old file, never half of it.
+    Follows a symlink and keeps the file's permissions (a private ledger stays private)."""
+    path = Path(path).resolve()
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    if path.exists():
+        os.chmod(tmp, path.stat().st_mode & 0o7777)
+    os.replace(tmp, path)
+
+
 # ---------- быстрый ввод ----------
 
 def open_accounts(entries):
@@ -567,10 +578,10 @@ def add_entry(line, today=None):
     e = parse_entry(line, today, open_accounts(entries), history(entries), p, currencies)
     fin_id = dt.datetime.now().strftime("%Y%m%dT%H%M%S-") + uuid.uuid4().hex[:6]
     before = INBOX.read_text(encoding="utf-8")
-    INBOX.write_text(before + entry_text(e, fin_id), encoding="utf-8")
+    write_atomic(INBOX, before + entry_text(e, fin_id))
     _, errors = load()
     if errors:
-        INBOX.write_text(before, encoding="utf-8")  # откат: журнал не портим
+        write_atomic(INBOX, before)  # откат: журнал не портим
         raise FinError("ledger", "Не записано:\n" + "\n".join(error_lines(errors)),
                        messages=error_lines(errors))
     e["id"] = fin_id
@@ -593,10 +604,10 @@ def undo_entry(fin_id=None):
         start -= 1
     removed = re.search(r'"(.*)"', header)
     before = "\n".join(lines)
-    INBOX.write_text("\n".join(lines[:start] + lines[end:]), encoding="utf-8")
+    write_atomic(INBOX, "\n".join(lines[:start] + lines[end:]))
     _, errors = load()
     if errors:
-        INBOX.write_text(before, encoding="utf-8")
+        write_atomic(INBOX, before)
         raise FinError("ledger", "Не отменено:\n" + "\n".join(error_lines(errors)),
                        messages=error_lines(errors))
     return {"narration": removed.group(1) if removed else ""}
@@ -624,11 +635,11 @@ def goal_cmd(words, today):
             cur = words[1].upper()
     params_file = LEDGER / "params.bean"
     before = params_file.read_text(encoding="utf-8")
-    params_file.write_text(before + f'{today} custom "fin-param" "income-goal" {amount}\n'
-                           f'{today} custom "fin-param" "income-goal-currency" "{cur}"\n', encoding="utf-8")
+    write_atomic(params_file, before + f'{today} custom "fin-param" "income-goal" {amount}\n'
+                 f'{today} custom "fin-param" "income-goal-currency" "{cur}"\n')
     _, errors = load()
     if errors:
-        params_file.write_text(before, encoding="utf-8")
+        write_atomic(params_file, before)
         raise FinError("ledger", "Цель не записана:\n" + "\n".join(error_lines(errors)),
                        messages=error_lines(errors))
     return {"amount": amount, "currency": cur}
@@ -876,15 +887,24 @@ def cmd_prices(a):
         if f"{d} price {cur} " not in text:
             added.append(f"{d} price {cur} {rate} {BASE}")
     if added:
-        with PRICES.open("a", encoding="utf-8") as f:
-            f.write("\n".join(added) + "\n")
+        # Checked by Beancount like every other write; on error the old prices file stays.
+        sep = "" if not text or text.endswith("\n") else "\n"
+        write_atomic(PRICES, text + sep + "\n".join(added) + "\n")
+        _, errors = load()
+        if errors:
+            write_atomic(PRICES, text)
+            raise FinError("ledger", "Курсы не записаны:\n" + "\n".join(error_lines(errors)),
+                           messages=error_lines(errors))
     print("\n".join(added) if added else f"Курсы ЦБ на {d} уже есть.")
 
 
 def cmd_review(a):
     today = current_date()
     if a.month:
-        y, mo = map(int, a.month.split("-"))
+        mo_ = re.fullmatch(r"(\d{4})-(\d{2})", a.month)
+        if not mo_ or not 1 <= int(mo_.group(2)) <= 12:
+            raise FinError("month-format", f"Месяц в формате ГГГГ-ММ, например {today:%Y-%m}.")
+        y, mo = int(mo_.group(1)), int(mo_.group(2))
     else:
         prev = today.replace(day=1) - dt.timedelta(days=1)
         y, mo = prev.year, prev.month
@@ -944,6 +964,12 @@ def main(argv=None):
             emit({"ok": False, "error": err.key, "message": err.text, **err.extra})
         else:
             print(err.text, file=sys.stderr)
+        sys.exit(1)
+    except Exception as err:
+        # The panel reads stdout only: keep the contract (JSON, exit 1) even for a bug or an OS error.
+        if not getattr(a, "json", False):
+            raise
+        emit({"ok": False, "error": "internal", "message": f"{type(err).__name__}: {err}"})
         sys.exit(1)
 
 

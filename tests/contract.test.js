@@ -81,5 +81,20 @@ assert.strictEqual(JSON.parse(fin("goal", "--json", "--", "много").out).err
 fin("goal", "--json", "--", "off")
 assert.strictEqual(M.readStatus(fin("status", "--json").out).growth.goal, null)
 
+// Writes keep the ledger file's permissions.
+fs.chmodSync(path.join(work, "ledger", "inbox.bean"), 0o600)
+r = JSON.parse(fin("add", "--json", "--", "100 такси").out)
+assert.strictEqual(fs.statSync(path.join(work, "ledger", "inbox.bean")).mode & 0o777, 0o600)
+fin("undo", "--json", r.entry.id)
+// A month that does not exist is refused, not turned into a note.
+assert.strictEqual(fin("review", "2026-13").code, 1)
+assert.ok(!fs.existsSync(path.join(work, "20 Обзоры", "2026-13.md")))
+// An unexpected error still answers in JSON, so the panel can show it.
+fs.renameSync(path.join(work, "ledger", "inbox.bean"), path.join(work, "inbox.bean.away"))
+r = fin("undo", "--json")
+assert.strictEqual(r.code, 1)
+assert.strictEqual(JSON.parse(r.out).error, "internal")
+fs.renameSync(path.join(work, "inbox.bean.away"), path.join(work, "ledger", "inbox.bean"))
+
 fs.rmSync(work, {recursive: true})
 console.log("contract tests passed")
