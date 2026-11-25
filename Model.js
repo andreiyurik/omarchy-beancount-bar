@@ -251,7 +251,8 @@ function shortMoney(value, format) {
   var f = format || {k: "%1k", m: "%1M", decimal: "."}
   var n = Math.abs(num(value)), sign = num(value) < 0 ? "−" : ""
   var text = function(x) { return String(x).replace(".", f.decimal) }
-  if (n >= 1e6) return sign + f.m.replace("%1", text(Math.round(n / 1e5) / 10))
+  // 999 500 and up would round to "1000k"; it reads as "1M".
+  if (n >= 999500) return sign + f.m.replace("%1", text(Math.round(n / 1e5) / 10))
   if (n >= 1e4) return sign + f.k.replace("%1", text(Math.round(n / 1e3)))
   if (n >= 1e3) return sign + f.k.replace("%1", text(Math.round(n / 100) / 10))
   return sign + text(Math.round(n))

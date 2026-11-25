@@ -65,6 +65,7 @@ assert.strictEqual(M.barText({ok: true, unprocessed: 0, ladder: [{done: true}]})
 assert.strictEqual(M.formatMoney(1234567, "RUB"), "1 234 567 ₽")
 assert.strictEqual(M.formatMoney(-12.5, "USD"), "−$12.50")
 assert.strictEqual(M.shortMoney(81500, {k: "%1к", m: "%1М", decimal: ","}), "82к")
+assert.strictEqual(M.shortMoney(999600, {k: "%1k", m: "%1M", decimal: "."}), "1M")
 assert.strictEqual(M.leaf("Expenses:Life:EatingOut"), "Life:EatingOut")
 
 // Plurals and lookup for a language other than the shell's.

@@ -11,7 +11,7 @@
   fin status --json           всё для панели Omarchy одним JSON (контракт schema 1)
   fin fava                    открыть Fava на http://localhost:5000
 
---json у check, add, undo, week, status — машинный вывод для плагина.
+--json у check, add, undo, week, goal, status — машинный вывод для плагина.
 """
 
 import argparse
@@ -489,7 +489,8 @@ def match_account(query, accounts, roots, prefer=None):
                    + ", ".join(a["name"] for a in found[:4]), query=query)
 
 
-AMOUNT_RE = re.compile(r"^(\+?)([$€₽]?)(\d+(?:[.,]\d{1,2})?)([кkКK]?)([$€₽]?)$")
+# re.ASCII: only 0-9 are digits, as in the panel's JavaScript (Python would also take "٢٩٠٠").
+AMOUNT_RE = re.compile(r"^(\+?)([$€₽]?)(\d+(?:[.,]\d{1,2})?)([кkКK]?)([$€₽]?)$", re.ASCII)
 
 
 def parse_entry(line, today, accounts, hist, p, currencies):
@@ -499,7 +500,7 @@ def parse_entry(line, today, accounts, hist, p, currencies):
         raise FinError("empty", "Пустая строка.")
     mo = AMOUNT_RE.match(tokens[0])
     if not mo:
-        if re.match(r"^\+?[$€₽]?\d", tokens[0]):
+        if re.match(r"^\+?[$€₽]?\d", tokens[0], re.ASCII):
             raise FinError("bad-amount", f"Не понимаю сумму «{tokens[0]}».", amount=tokens[0])
         raise FinError("amount-first", "Сначала сумма: «2900 проездной».")
     income = mo.group(1) == "+"
