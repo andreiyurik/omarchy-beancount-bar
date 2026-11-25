@@ -217,6 +217,19 @@ function parseCommand(line) {
   return {ok: true, kind: "week", args: args, target: num(args[0]), text: args.slice(1).join(" ")}
 }
 
+// The text for a failed fin call. fin's own message is in Russian, so the error code is translated
+// with t (the panel's lookup) instead; unknown codes fall back to the message's first line,
+// so a newer fin with new codes still says something.
+function finErrorText(r, t) {
+  if (!r) return t("entry.failed")
+  var key = "entry." + str(r.error, 40), text = r.error ? String(t(key) || "") : ""
+  if (text && text !== key) {
+    if (r.error === "ledger") return text.replace("%1", Array.isArray(r.messages) && r.messages.length ? str(r.messages[0], 300) : "…")
+    return text.replace("%1", str(r.amount || r.query || r.currency, 60))
+  }
+  return r.message ? str(r.message, 2000).split("\n")[0] : t("entry.failed")
+}
+
 function pad(n) { return n < 10 ? "0" + n : String(n) }
 function iso(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) }
 
@@ -295,4 +308,4 @@ function barText(status) {
 if (typeof module !== "undefined") module.exports = {readStatus: readStatus, parseEntry: parseEntry, parseCommand: parseCommand, matchAccount: matchAccount,
   formatMoney: formatMoney, shortMoney: shortMoney, nextStep: nextStep, barText: barText, leaf: leaf, iso: iso,
   remaining: remaining, obsidianUrl: obsidianUrl, pluralCategory: pluralCategory, lookup: lookup,
-  readGrowth: readGrowth, freshWins: freshWins, growthBarText: growthBarText, wealthLevel: wealthLevel}
+  readGrowth: readGrowth, freshWins: freshWins, growthBarText: growthBarText, wealthLevel: wealthLevel, finErrorText: finErrorText}

@@ -259,7 +259,7 @@ Item {
     if (preview.kind === "goal") { runCommand(["goal"], preview.args, done); return }
     write(["add", "--json", "--", String(text).trim()], function(ok, out) {
       var r = parse(out)
-      if (!ok || !r || !r.entry) { done(false, r && r.message ? String(r.message).split("\n")[0] : t("entry.failed")); return }
+      if (!ok || !r || !r.entry) { done(false, finMessage(r)); return }
       lastAdded = {id: String(r.entry.id), narration: String(r.entry.narration).slice(0, 200)}
       var e = r.entry
       // money(), not plainMoney(): the desktop notification must respect "hide amounts" too.
@@ -280,12 +280,13 @@ Item {
   function runCommand(name, args, done) {
     write(name.concat(["--json", "--"]).concat(args), function(ok, out) {
       var r = parse(out)
-      if (done) done(ok, ok ? "" : (r && r.message ? String(r.message).split("\n")[0] : t("entry.failed")))
+      if (done) done(ok, ok ? "" : finMessage(r))
       if (ok) refresh()
     })
   }
   function bumpWeek(delta) { runWeek([delta > 0 ? "+" + delta : String(delta)], null) }
 
+  function finMessage(r) { return Model.finErrorText(r, t) }
   function parse(text) { try { return JSON.parse(String(text).slice(0, 100000)) } catch (error) { return null } }
 
   function toggleAmounts() {

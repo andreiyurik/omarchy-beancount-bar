@@ -95,4 +95,11 @@ assert.deepStrictEqual([0, 99999, 100000, 999999, 1e6, 1e7, 5e7].map(x => M.weal
 assert.deepStrictEqual(M.wealthLevel(192000).next, {key: "gold", from: 1000000})
 assert.strictEqual(M.wealthLevel(2e7).next, null)
 
+// fin errors are shown in the panel's language, by code.
+const en = require("../i18n/en.json"), tr = key => en[key] || key
+assert.strictEqual(M.finErrorText({error: "unknown-account", query: "bank", message: "Нет счёта «bank»."}, tr), "No account matches “bank”")
+assert.strictEqual(M.finErrorText({error: "ledger", messages: ["inbox.bean:5: syntax error"], message: "Не записано:\n…"}, tr), "Not saved: the ledger would break (inbox.bean:5: syntax error)")
+assert.strictEqual(M.finErrorText({error: "brand-new-code", message: "first\nsecond"}, tr), "first")
+assert.strictEqual(M.finErrorText(null, tr), en["entry.failed"])
+
 console.log("model tests passed")

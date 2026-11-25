@@ -597,7 +597,8 @@ def undo_entry(fin_id=None):
     _, errors = load()
     if errors:
         INBOX.write_text(before, encoding="utf-8")
-        raise FinError("ledger", "Не отменено:\n" + "\n".join(error_lines(errors)))
+        raise FinError("ledger", "Не отменено:\n" + "\n".join(error_lines(errors)),
+                       messages=error_lines(errors))
     return {"narration": removed.group(1) if removed else ""}
 
 
@@ -619,7 +620,7 @@ def goal_cmd(words, today):
         cur = SYMBOLS.get(mo.group(2) or mo.group(5), BASE)
         if len(words) > 1:
             if words[1].upper() not in currencies:
-                raise FinError("goal-currency", f"Нет валюты {words[1]} в журнале.")
+                raise FinError("goal-currency", f"Нет валюты {words[1]} в журнале.", currency=words[1])
             cur = words[1].upper()
     params_file = LEDGER / "params.bean"
     before = params_file.read_text(encoding="utf-8")
@@ -628,7 +629,8 @@ def goal_cmd(words, today):
     _, errors = load()
     if errors:
         params_file.write_text(before, encoding="utf-8")
-        raise FinError("ledger", "Цель не записана:\n" + "\n".join(error_lines(errors)))
+        raise FinError("ledger", "Цель не записана:\n" + "\n".join(error_lines(errors)),
+                       messages=error_lines(errors))
     return {"amount": amount, "currency": cur}
 
 
