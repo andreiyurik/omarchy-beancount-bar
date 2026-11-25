@@ -152,7 +152,10 @@ Item {
     property bool exitedOnce: false
     stdout: StdioCollector { id: readerOut }
     stderr: StdioCollector { id: readerErr }
-    onExited: function(code) { exitedOnce = true; root.busy = false; root.finishRefresh(code, readerOut.text, readerErr.text) }
+    onExited: function(code) {
+      exitedOnce = true; root.busy = false; root.finishRefresh(code, readerOut.text, readerErr.text)
+      if (root.refreshQueued) Qt.callLater(root.refresh)
+    }
     // A command that can't start never exits: say so instead of waiting forever.
     onRunningChanged: if (!running && root.busy) Qt.callLater(function() {
       if (!reader.exitedOnce && root.busy) { root.busy = false; root.problem = {key: "not-found", message: ""} }
@@ -208,8 +211,12 @@ Item {
   Component.onCompleted: refresh()
   onCommandChanged: refresh()
 
+  // A refresh asked for while one runs (e.g. right after an entry) may see the ledger from before
+  // the write, so it runs again once the current one ends instead of being dropped.
+  property bool refreshQueued: false
   function refresh() {
-    if (reader.running) return
+    if (reader.running) { refreshQueued = true; return }
+    refreshQueued = false
     busy = true
     reader.exitedOnce = false
     reader.command = [command, "status", "--json"]
