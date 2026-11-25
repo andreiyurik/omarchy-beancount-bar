@@ -517,7 +517,8 @@ def parse_entry(line, today, accounts, hist, p, currencies):
             offset = DATE_WORDS[low]
         else:
             words.append(tok)
-    narration = " ".join(words).replace('"', "'").strip()
+    # A backslash would escape the closing quote of the Beancount string, so it goes too.
+    narration = " ".join(words).replace('"', "'").replace("\\", "/").strip()
     if not narration:
         raise FinError("name-missing", "Нужно описание: «2900 проездной».")
 

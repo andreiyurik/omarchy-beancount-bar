@@ -165,7 +165,8 @@ function parseEntry(line, today, ctx) {
     else if (DATE_WORDS[low] !== undefined) offset = DATE_WORDS[low]
     else words.push(tok)
   })
-  var narration = words.join(" ").replace(/"/g, "'").trim()
+  // Same as fin.py: quotes and backslashes can't break out of the Beancount string.
+  var narration = words.join(" ").replace(/"/g, "'").replace(/\\/g, "/").trim()
   if (!narration) return {ok: false, error: "name-missing", amount: tokens[0]}
 
   var accounts = ctx.accounts || []

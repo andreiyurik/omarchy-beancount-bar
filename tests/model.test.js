@@ -38,6 +38,7 @@ assert.strictEqual(p("12x проездной").error, "bad-amount")
 assert.strictEqual(p("2900 проездной @нетакого").error, "unknown-account")
 // Quotes can't break out of the Beancount string.
 assert.strictEqual(p('450 "проездной"').narration, "'проездной'")
+assert.strictEqual(p("450 a\\b\\").narration, "a/b/")
 
 // Week commands.
 assert.deepStrictEqual(M.parseCommand("неделя 10 предложений клиентам"), {ok: true, kind: "week", args: ["10", "предложений", "клиентам"], target: 10, text: "предложений клиентам"})
