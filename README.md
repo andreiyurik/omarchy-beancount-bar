@@ -32,7 +32,7 @@ Then point the plugin at a `fin` command (widget settings → `fin command`). Th
 ln -s ~/.config/omarchy/plugins/andreiyurik.beancount-bar/cli/fin ~/.local/bin/fin
 ```
 
-`fin` reads the ledger from `~/finance/ledger/main.bean`; set `FIN_ROOT` to use another folder.
+`fin` reads the ledger from `~/finance/ledger/main.bean`; set `FIN_ROOT` to use another folder. `FIN_TODAY=YYYY-MM-DD` makes it work as if it were that day (tests, demos, screenshots).
 
 It needs [uv](https://docs.astral.sh/uv/), which fetches Beancount 3.2.3 on first run. `cli/example/` is a starting ledger with the account layout the reference `fin` expects; copy it and replace the made-up entries.
 

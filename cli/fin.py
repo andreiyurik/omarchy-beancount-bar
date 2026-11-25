@@ -47,6 +47,17 @@ SYMBOLS = {"₽": "RUB", "$": "USD", "€": "EUR"}
 DATE_WORDS = {"вчера": 1, "yesterday": 1, "позавчера": 2}
 
 
+def current_date():
+    """The date fin works on: FIN_TODAY=YYYY-MM-DD if set (tests, demos, screenshots), else the real date."""
+    value = os.environ.get("FIN_TODAY")
+    if value:
+        try:
+            return dt.date.fromisoformat(value)
+        except ValueError:
+            raise SystemExit(f"FIN_TODAY must be YYYY-MM-DD, got {value!r}")
+    return dt.date.today()
+
+
 class FinError(Exception):
     """Ошибка для пользователя: key — для перевода в плагине, text — по-русски."""
 
@@ -548,7 +559,7 @@ def entry_text(e, fin_id):
 
 
 def add_entry(line, today=None):
-    today = today or dt.date.today()
+    today = today or current_date()
     entries = load_ok()
     p = params(entries, today)
     currencies = {e.currency for e in entries if isinstance(e, data.Commodity)}
@@ -795,7 +806,7 @@ def report_text(today):
 # ---------- команды ----------
 
 def cmd_check(a):
-    m = metrics(load_ok(), dt.date.today())
+    m = metrics(load_ok(), current_date())
     if a.json:
         return emit({"ok": True, "warnings": m["warnings"]})
     w = [x for x in m["warnings"] if x["key"] != "little-data"]
@@ -805,11 +816,11 @@ def cmd_check(a):
 
 
 def cmd_report(a):
-    print(report_text(dt.date.today()))
+    print(report_text(current_date()))
 
 
 def cmd_status(a):
-    emit(status(dt.date.today()))
+    emit(status(current_date()))
 
 
 def cmd_add(a):
@@ -832,14 +843,14 @@ def cmd_undo(a):
 
 
 def cmd_week(a):
-    w = week_cmd(a.words, dt.date.today())
+    w = week_cmd(a.words, current_date())
     if a.json:
         return emit({"ok": True, "week": w})
     print("Действие недели не задано." if not w else f"{w['text']}: {w['done']} / {w['target']}")
 
 
 def cmd_goal(a):
-    g = goal_cmd(a.words, dt.date.today())
+    g = goal_cmd(a.words, current_date())
     if a.json:
         return emit({"ok": True, "goal": g})
     print("Цель убрана." if g["amount"] == 0 else f"Цель месяца: {g['amount']} {g['currency']}")
@@ -868,7 +879,7 @@ def cmd_prices(a):
 
 
 def cmd_review(a):
-    today = dt.date.today()
+    today = current_date()
     if a.month:
         y, mo = map(int, a.month.split("-"))
     else:

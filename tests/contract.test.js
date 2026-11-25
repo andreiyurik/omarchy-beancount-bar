@@ -6,7 +6,8 @@ const M = require("./load-model")
 const repo = path.join(__dirname, "..")
 const work = fs.mkdtempSync(path.join(os.tmpdir(), "beancount-bar-contract-"))
 fs.cpSync(path.join(repo, "cli", "example"), work, {recursive: true})
-const env = {...process.env, FIN_ROOT: work}
+// The example ledger is November 2026: pin the date so growth numbers do not drift with the calendar.
+const env = {...process.env, FIN_ROOT: work, FIN_TODAY: "2026-11-22"}
 const fin = (...args) => {
   try { return {code: 0, out: execFileSync(path.join(repo, "cli", "fin"), args, {env, encoding: "utf8"})} }
   catch (error) { return {code: error.status, out: error.stdout} }
